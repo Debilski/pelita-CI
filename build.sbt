@@ -25,3 +25,24 @@ libraryDependencies ++= {
     "org.scalaz" %% "scalaz-effect" % scalazVersion
   )
 }
+
+libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.0"
+
+autoCompilerPlugins := true
+
+libraryDependencies <+= scalaVersion {
+  v => compilerPlugin("org.scala-lang.plugins" % "continuations" % "2.10.0")
+}
+
+scalacOptions += "-P:continuations:enable"
+
+scalacOptions += "-deprecation"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.0"
+
+libraryDependencies ++= List(
+  // use the right Slick version here:
+  "com.typesafe.slick" %% "slick" % "1.0.0",
+  "org.slf4j" % "slf4j-nop" % "1.6.4",
+  "com.h2database" % "h2" % "1.3.166"
+)
