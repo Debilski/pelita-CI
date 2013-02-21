@@ -1,0 +1,5 @@
+/project/target/
+/project/project/target
+/target/
+*.h2.db
+*.db.lock.db
