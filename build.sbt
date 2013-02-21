@@ -16,3 +16,12 @@ libraryDependencies ++= {
   )
 }
 
+resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
+
+libraryDependencies ++= {
+  val scalazVersion = "7.0.0-M7"
+  Seq(
+    "org.scalaz" %% "scalaz-core" % scalazVersion,
+    "org.scalaz" %% "scalaz-effect" % scalazVersion
+  )
+}
