@@ -1,33 +1,36 @@
 package de.debilski.pelita.CI
+package PelitaInterface
 
 import scalaz.effect.IO
 
 trait Game {
   def path: java.io.File
   def exe: String
-  def run(team1: String, team2: String): scala.sys.process.ProcessBuilder
+  def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None): scala.sys.process.ProcessBuilder
 }
 
 trait PelitaGame extends Game {
   def path = new java.io.File("/Volumes/Data/Projects/pelita")
   def exe = "./pelitagame"
 
-  def cmd(team1: String, team2: String) = {
-    exe :: team1 :: team2 :: "--null" :: "--parseable-output" :: "--no-publish" :: Nil
+  def cmd(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = {
+    val c = controller.map("--controller" :: _ :: "--external-controller" :: Nil).getOrElse(Nil)
+    val p = subscriber.map("--publish" :: _ :: Nil).getOrElse("--no-publish" :: Nil)
+    exe :: team1 :: team2 :: "--null" :: "--parseable-output" :: c ::: p
   }
   
-  def run(team1: String, team2: String) = {
-    scala.sys.process.Process(cmd(team1, team2), cwd=path)
+  def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = {
+    scala.sys.process.Process(cmd(team1, team2, controller, subscriber), cwd=path)
   }
 }
 
 trait DummyGame extends PelitaGame {
   override def exe = "echo"
-  override def run(team1: String, team2: String) = super.run(team1, team2) #&& ("echo" :: "1" :: Nil)
+  override def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = super.run(team1, team2, controller, subscriber) #&& ("echo" :: "1" :: Nil)
 }
 
 trait ShortGame extends PelitaGame {
-  override def cmd(team1: String, team2: String) = super.cmd(team1, team2) ::: ("--rounds" :: "3" :: Nil)
+  override def cmd(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = super.cmd(team1, team2, controller, subscriber) ::: ("--rounds" :: "3" :: Nil)
 }
 
 abstract class Runner {
@@ -80,7 +83,7 @@ abstract class Runner {
     
   }
   
-  def playGame(pairing: Pairing): IO[Option[MatchResult]] = {
+  def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[Option[MatchResult]] = {
     import scala.sys.process.Process
     
     val Pairing(team1: Team, team2: Team) = pairing
@@ -101,7 +104,7 @@ abstract class Runner {
         val team1Spec = team1Path.resolve(team1.factory).toFile.toString
         val team2Spec = team2Path.resolve(team2.factory).toFile.toString
         
-        val lines = game.run(team1Spec, team2Spec).lines
+        val lines = game.run(team1Spec, team2Spec, controller, subscriber).lines
         
         lines foreach println
         val pelitaOutput = lines.lastOption

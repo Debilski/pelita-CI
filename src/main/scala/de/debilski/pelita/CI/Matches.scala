@@ -1,5 +1,13 @@
 package de.debilski.pelita.CI
 
+/* For the first few games, a player should not get any immediate score updates
+ * but only accumulate the what-if numbers. (Shown in a lighter colour in the UI.) After those first games, a more
+ * elaborate guess on the player’s ranking is possible. And it might be possible to calculate the gained score for
+ * those games in hindsight.
+ * 
+ * With the normalisation value of 400, we might then have an approximate start value of 1200 and a lower boundary of 0. 
+ */
+
 trait Ranking { self =>
   type Score = Double
   type Team

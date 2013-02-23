@@ -1,38 +1,25 @@
 package de.debilski.pelita.CI
 
-import akka.actor.Actor
+import akka.actor.{ Actor, ActorSystem }
 import akka.actor.Props
 import akka.event.Logging
+import akka.actor.PoisonPill
 
+import PelitaInterface.GameController
 
 sealed trait ControllerMessage
 case class AddTeam(team: Team) extends ControllerMessage
 case class PlayGame(team1: Team, team2: Team) extends ControllerMessage
 
 class Controller extends Actor {
-  val gameQueue = context.actorOf(Props[GameQueue].withDispatcher("akka.actor.my-balancing-dispatcher"))
-  val gameQueueAdditional = Vector.fill(5)(context.actorOf(Props[GameQueue].withDispatcher("akka.actor.my-balancing-dispatcher")))
+  val basePort = 51100
+  val gameQueue = context.actorOf(Props(new GameController(s"tcp://127.0.0.1:$basePort", s"tcp://127.0.0.1:${basePort+1}")).withDispatcher("akka.actor.game-controller"))
+  val gameQueueAdditional = (1 to 5).map(i => context.actorOf(Props(new GameController(s"tcp://127.0.0.1:${basePort + 2*i}", s"tcp://127.0.0.1:${basePort + 2*i + 1}")).withDispatcher("akka.actor.game-controller")))
   
   val log = Logging(context.system, this)
   def receive = {
     case c@PlayGame(a, b) => gameQueue.!(c)(sender)
     case _      ⇒ log.info("received unknown message")
-  }
-}
-
-class GameQueue extends Actor {
-  val log = Logging(context.system, this)
-  
-  object TestRunner extends de.debilski.pelita.CI.Runner {
-    type GameType = DummyGame
-    val game = new DummyGame{}
-  }
-  
-  def receive = {
-    case PlayGame(a, b) => {
-      val result = TestRunner.playGame(Pairing(a, b)).unsafePerformIO
-      sender ! result
-    }
   }
 }
 
@@ -56,7 +43,6 @@ object Main extends App {
   myActor ! "..."
   //myActor ! akka.actor.PoisonPill
   
-  Thread.sleep(8000)
   
   import akka.pattern.gracefulStop
   import scala.concurrent.Await
@@ -72,4 +58,5 @@ object Main extends App {
     case e: akka.pattern.AskTimeoutException ⇒
   }
   system.shutdown
+  println("...")
 }

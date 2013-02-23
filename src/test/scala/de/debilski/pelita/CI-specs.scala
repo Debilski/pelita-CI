@@ -1,10 +1,11 @@
 package de.debilski.pelita.CI
+package PelitaInterface
 
 import org.specs2.mutable.Specification
 
 class RunnerSpecs extends Specification{
   
-  object TestRunner extends de.debilski.pelita.CI.Runner {
+  object TestRunner extends Runner {
     type GameType = DummyGame
     val game = new DummyGame{}
   }

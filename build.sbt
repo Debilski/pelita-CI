@@ -26,7 +26,13 @@ libraryDependencies ++= {
   )
 }
 
-libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.1.0"
+libraryDependencies ++= {
+  val akkaVersion = "2.1.0"
+  Seq(
+  	"com.typesafe.akka" %% "akka-actor" % akkaVersion,
+  	"com.typesafe.akka" %% "akka-zeromq" % akkaVersion
+  )
+}
 
 autoCompilerPlugins := true
 
