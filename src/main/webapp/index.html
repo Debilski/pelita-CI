@@ -2,8 +2,19 @@
 <html>
   <head>
     <title>Pelita CI</title>
+    <script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
+    <script id="json" src="/classpath/json.js" type="text/javascript"></script>
   </head>
   <body>
     <h1>Pelita continuous integration service</h1>
+    <section id="teams">
+      <header><h1>Current teams</h1></header>
+      <lift:comet type="Teams" name="AllTeamsComet">
+        <tms:teams>Loading teams…</tms:teams>
+      </lift:comet>
+    </section>
+    <section id="matches">
+      <header><h1>Matches</h1></header>
+    </section>
   </body>
 </html>
