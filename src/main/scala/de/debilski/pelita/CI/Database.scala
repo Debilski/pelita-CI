@@ -50,9 +50,7 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreSt
   val tables = new Tables
   
   val log = Logging(TypedActor.context.system, TypedActor.context.self)
-  
-  //def this() = this("")
-  println("INIT")
+
   import TypedActor.dispatcher
   
   def createDB: Unit = {

@@ -30,9 +30,12 @@ libraryDependencies ++= {
   val akkaVersion = "2.1.0"
   Seq(
   	"com.typesafe.akka" %% "akka-actor" % akkaVersion,
-  	"com.typesafe.akka" %% "akka-zeromq" % akkaVersion
+  	"com.typesafe.akka" %% "akka-zeromq" % akkaVersion,
+  	"com.typesafe.akka" %% "akka-testkit" % akkaVersion
   )
 }
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 
 autoCompilerPlugins := true
 

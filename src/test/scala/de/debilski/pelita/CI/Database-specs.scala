@@ -32,7 +32,7 @@ class DatabaseSpecs extends Specification{
       
       val fut = myActor.getTeams.map(_.length)
       
-      Await.result(fut, Duration("2s"))  must_== 2
+      Await.result(fut, Duration("5s"))  must_== 2
     }
     
     "not add duplicate teams" in {
@@ -45,7 +45,7 @@ class DatabaseSpecs extends Specification{
       
       val fut = myActor.getTeams.map(_.length)
       
-      Await.result(fut, Duration("2s"))  must_== 2
+      Await.result(fut, Duration("5s"))  must_== 2
     }
     
     "add teams coming from separate threads" in {
@@ -59,7 +59,7 @@ class DatabaseSpecs extends Specification{
       
       val count = for (t <- teams; c <- myActor.getTeams.map(_.length)) yield c
       
-      Await.result(count, Duration("5s")) must_== numTeams
+      Await.result(count, Duration("8s")) must_== numTeams
       
     }
   }
