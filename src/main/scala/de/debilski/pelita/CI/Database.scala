@@ -37,8 +37,8 @@ import akka.actor.{ TypedActor, ActorSystem, TypedProps }
 import akka.event.Logging
 
 trait DBController {
-  def createDB: Unit
-  def addTeam(uri: String, factory: String): Unit
+  def createDB(): Unit
+  def addTeam(uri: String, factory: String): Future[Int]
   def getTeams: Future[Seq[Team]]
 }
 
@@ -53,15 +53,21 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreSt
 
   import TypedActor.dispatcher
   
-  def createDB: Unit = {
+  def createDB(): Unit = {
     db withSession {
       log.info("DB created")
       (tables.Teams.ddl ++ tables.Matches.ddl).create
     }
   }
   
-  def addTeam(uri: String, factory: String): Unit =  db withSession {
-    tables.Teams.insert(Team(None, uri, factory))
+  def addTeam(uri: String, factory: String): Future[Int] =  db withSession {
+    val id: Int = try {
+        tables.Teams.forInsert returning tables.Teams.id insert (uri, factory)
+      } catch {
+        case e: org.h2.jdbc.JdbcSQLException =>
+        (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
+      }
+    (Promise() success id).future
   }
   
   def getTeams: Future[Seq[Team]] = db withSession {

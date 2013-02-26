@@ -25,7 +25,7 @@ class DatabaseSpecs extends Specification{
   "Database" should {
     "add teams" in {
       val myActor = DBController.createActor(system)("jdbc:h2:mem:test1;DB_CLOSE_DELAY=-1")
-      myActor.createDB
+      myActor.createDB()
       
       myActor addTeam (team1.uri.toString, team1.factory)
       myActor addTeam (team2.uri.toString, team2.factory)
@@ -37,7 +37,7 @@ class DatabaseSpecs extends Specification{
     
     "not add duplicate teams" in {
       val myActor = DBController.createActor(system)("jdbc:h2:mem:test2;DB_CLOSE_DELAY=-1")
-      myActor.createDB
+      myActor.createDB()
       
       myActor addTeam (team1.uri.toString, team1.factory)
       myActor addTeam (team2.uri.toString, team2.factory)
@@ -47,10 +47,29 @@ class DatabaseSpecs extends Specification{
       
       Await.result(fut, Duration("5s"))  must_== 2
     }
+
+    "duplicate teams should have the same id" in {
+      val myActor = DBController.createActor(system)("jdbc:h2:mem:test3;DB_CLOSE_DELAY=-1")
+      myActor.createDB()
+
+      val id1A_F: Future[Int] = myActor addTeam (team1.uri.toString, team1.factory)
+      val id2A_F: Future[Int] = myActor addTeam (team2.uri.toString, team2.factory)
+      val id1B_F: Future[Int] = myActor addTeam (team1B.uri.toString, team1B.factory)
+      val id2B_F: Future[Int] = myActor addTeam (team2.uri.toString, team2.factory)
+
+      val success = for {
+        id1A <- id1A_F
+        id2A <- id2A_F
+        id1B <- id1B_F
+        id2B <- id2B_F
+      } yield (id1A == id1B) && (id2A == id2B)
+
+      Await.result(success, Duration("5s")) must_== true
+    }
     
     "add teams coming from separate threads" in {
-      val myActor = DBController.createActor(system)("jdbc:h2:mem:test3;DB_CLOSE_DELAY=-1")
-      myActor.createDB
+      val myActor = DBController.createActor(system)("jdbc:h2:mem:test4;DB_CLOSE_DELAY=-1")
+      myActor.createDB()
       
       val numTeams = 120
       val teams = Future.traverse(1 to numTeams){ i =>
