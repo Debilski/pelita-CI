@@ -42,14 +42,13 @@ trait DBController {
   def getTeams: Future[Seq[Team]]
 }
 
-class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreStart with TypedActor.PreRestart {
+class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRestart {
+  val log = Logging(TypedActor.context.system, TypedActor.context.self)
+
   def preRestart(reason: Throwable,message: Option[Any]) = log.info(s"DBController restarted: reason: $reason, msg: $message")
-  def preStart() = println("PRESTART")
   
   val db = Database.forURL(dbURI, driver = "org.h2.Driver")
   val tables = new Tables
-  
-  val log = Logging(TypedActor.context.system, TypedActor.context.self)
 
   import TypedActor.dispatcher
   
