@@ -1,7 +1,7 @@
 package de.debilski.pelita.pelitaci
 
 package backend {
-  case class Team(uri: java.net.URI, factory: String)
+  case class Team(uri: String, factory: String)
   case class TeamPath(team: Team, path: java.io.File)
   case class Pairing(team1: Team, team2: Team)
 
@@ -14,5 +14,4 @@ package backend {
 }
 
 package object backend {
-  type GitURI = java.net.URI
 }

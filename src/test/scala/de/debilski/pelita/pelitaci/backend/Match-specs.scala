@@ -10,8 +10,8 @@ class MatchSpecs extends Specification{
   }
 
   import de.debilski.pelita.pelitaci.backend.Team
-  val team1 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory1")
-  val team2 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory2")
+  val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory1")
+  val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory2")
   
   "Elo expectation" should {
     "be 0.5 when both are equally strong" in {

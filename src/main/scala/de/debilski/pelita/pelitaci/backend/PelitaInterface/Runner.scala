@@ -37,11 +37,13 @@ abstract class Runner {
   type GameType <: Game
   val game: GameType
   
-  def cloneRepo(uri: GitURI, cwd: java.io.File): scala.sys.process.ProcessBuilder = {
+  def cloneRepo(uri: String, cwd: java.io.File): scala.sys.process.ProcessBuilder = {
     import scala.sys.process.Process
 
-    val commit = uri.getFragment
-    val repository = new java.net.URI(uri.getScheme, uri.getSchemeSpecificPart, null).toString // null???
+    val repo = new java.net.URI(uri)
+
+    val commit = repo.getFragment
+    val repository = new java.net.URI(repo.getScheme, repo.getSchemeSpecificPart, null).toString // null???
     val depth = 2
   
     val cmd = "git" :: "clone" ::

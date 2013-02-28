@@ -18,9 +18,9 @@ class DatabaseSpecs extends Specification{
   
   import database.DBController
   
-  val team1 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory")
-  val team1B = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory")
-  val team2 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory2")
+  val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team1B = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory2")
 
   "Database" should {
     "add teams" in {

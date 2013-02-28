@@ -23,8 +23,8 @@ class CIControllerSpec extends TestKit(ActorSystem("CIControllerSpec"))
     "run with workers" in {
       val master = system.actorOf(Props[Controller], name="controller1")
       
-      val team1 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory")
-      val team2 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory")
+      val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+      val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
       
       master ! PlayGame(team1, team2)
       master ! PlayGame(team1, team2)

@@ -3,14 +3,13 @@ package lib
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.liftweb.http.CometActor
-import java.net.URI
 
 object CI {
   case class TeamsList(teams: Seq[de.debilski.pelita.pelitaci.backend.Team])
 
   def requestTeams(actor: CometActor) = {
     db.getTeams map { teams =>
-      actor send TeamsList(teams.map(team => de.debilski.pelita.pelitaci.backend.Team(new java.net.URI(team.uri), team.factory)))
+      actor send TeamsList(teams.map(team => de.debilski.pelita.pelitaci.backend.Team(team.uri, team.factory)))
     }
   }
 

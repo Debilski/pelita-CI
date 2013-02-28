@@ -18,7 +18,7 @@ import net.liftweb.util.Schedule
 object Rest extends RestHelper {
 
   implicit def t2t(t: de.debilski.pelita.pelitaci.backend.database.Team): de.debilski.pelita.pelitaci.backend.Team = {
-    de.debilski.pelita.pelitaci.backend.Team(new java.net.URI(t.uri), t.factory)
+    de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
   }
 
   def init() : Unit = {
