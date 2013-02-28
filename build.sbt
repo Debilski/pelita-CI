@@ -47,6 +47,10 @@ scalacOptions += "-P:continuations:enable"
 
 scalacOptions += "-deprecation"
 
+scalacOptions += "-feature"
+
+scalacOptions += "-Xlint"
+
 libraryDependencies += "com.typesafe.akka" %% "akka-dataflow" % "2.1.0"
 
 libraryDependencies ++= List(
