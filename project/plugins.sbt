@@ -7,3 +7,5 @@ libraryDependencies <+= sbtVersion(v => v match {
     "com.github.siasia" %% "xsbt-web-plugin" % "0.12.0-0.2.11.1"
 })
 
+addSbtPlugin("me.lessis" % "coffeescripted-sbt" % "0.2.3")
+
