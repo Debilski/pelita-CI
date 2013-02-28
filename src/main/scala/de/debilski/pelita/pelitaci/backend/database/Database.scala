@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI.database
+package de.debilski.pelita.pelitaci.backend.database
 
 import scala.slick.driver.H2Driver.simple._
 import Database.threadLocalSession
@@ -39,6 +39,7 @@ import akka.event.Logging
 trait DBController {
   def createDB(): Unit
   def addTeam(uri: String, factory: String): Future[Int]
+  def getTeam(id: Int): Future[Team]
   def getTeams: Future[Seq[Team]]
 }
 
@@ -67,6 +68,10 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRe
         (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
       }
     (Promise() success id).future
+  }
+
+  def getTeam(id: Int): Future[Team] = db withSession {
+    (Promise() complete scala.util.Try(tables.Teams.filter(_.id === id).map(_.*).first)).future
   }
   
   def getTeams: Future[Seq[Team]] = db withSession {

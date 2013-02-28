@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 package PelitaInterface
 
 import scalaz.effect.IO
@@ -39,9 +39,9 @@ abstract class Runner {
   
   def cloneRepo(uri: GitURI, cwd: java.io.File): scala.sys.process.ProcessBuilder = {
     import scala.sys.process.Process
-  
+
     val commit = uri.getFragment
-    val repository = uri.getPath
+    val repository = new java.net.URI(uri.getScheme, uri.getSchemeSpecificPart, null).toString // null???
     val depth = 2
   
     val cmd = "git" :: "clone" ::
@@ -50,7 +50,7 @@ abstract class Runner {
               "--recurse-submodules" ::
               "--" :: repository ::
               "." :: Nil
-  
+
     Process(cmd, cwd=cwd)
   }
   

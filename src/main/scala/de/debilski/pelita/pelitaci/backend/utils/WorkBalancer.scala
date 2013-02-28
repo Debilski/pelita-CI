@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI.utils
+package de.debilski.pelita.pelitaci.backend.utils
 package workbalancer
 
 import akka.actor.{ Actor, ActorRef, ActorPath, ActorLogging, Terminated }

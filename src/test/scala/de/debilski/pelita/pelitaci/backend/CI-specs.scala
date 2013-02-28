@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 package PelitaInterface
 
 import org.specs2.mutable.Specification

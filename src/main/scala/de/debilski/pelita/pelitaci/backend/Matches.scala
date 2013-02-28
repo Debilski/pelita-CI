@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci
 
 /* For the first few games, a player should not get any immediate score updates
  * but only accumulate the what-if numbers. (Shown in a lighter colour in the UI.) After those first games, a more

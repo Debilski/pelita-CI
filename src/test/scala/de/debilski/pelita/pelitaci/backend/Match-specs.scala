@@ -1,14 +1,15 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci
 
 import org.specs2.mutable.Specification
 
 class MatchSpecs extends Specification{
 
   val ranking = new Ranking {
-    type Team = de.debilski.pelita.CI.Team
+    type Team = de.debilski.pelita.pelitaci.backend.Team
     val teamScores = Map[Team, Score]() withDefaultValue 0.0
   }
-  
+
+  import de.debilski.pelita.pelitaci.backend.Team
   val team1 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory1")
   val team2 = Team(uri=new java.net.URI("/Volumes/Data/Projects/Python-School/players#master"), "rike:factory2")
   

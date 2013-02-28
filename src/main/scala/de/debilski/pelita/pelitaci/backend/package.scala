@@ -1,6 +1,6 @@
-package de.debilski.pelita
+package de.debilski.pelita.pelitaci
 
-package CI {
+package backend {
   case class Team(uri: java.net.URI, factory: String)
   case class TeamPath(team: Team, path: java.io.File)
   case class Pairing(team1: Team, team2: Team)
@@ -13,6 +13,6 @@ package CI {
   case class MatchResult(pairing: Pairing, result: MatchResultCode)
 }
 
-package object CI {
+package object backend {
   type GitURI = java.net.URI
 }

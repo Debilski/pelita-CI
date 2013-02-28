@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 package PelitaInterface
 
 import scala.concurrent.Future
@@ -21,6 +21,36 @@ trait SimpleSubscriberInterface {
   def exit
 }
 
+case class PelitaTeam(
+    name: String,
+    score: Int,
+    timeout_team: Int,
+    team_time: Double,
+    food_count: Int,
+    food_to_eat: Int)
+
+case class PelitaGameState(
+    teams: (PelitaTeam, PelitaTeam),
+    bot_id: Option[Int],
+    round_index: Option[Int],
+    running_time: Double,
+    finished: Boolean,
+    team_wins: Option[Int],
+    game_draw: Option[Boolean],
+    game_time: Int,
+    timeout_length: Double,
+    max_timeouts: Int,
+    layout_name: String)
+
+case class PelitaTeamMinimal(
+    name: String,
+    score: Int)
+
+case class PelitaMatchMinimal(
+    teamA: PelitaTeamMinimal,
+    teamB: PelitaTeamMinimal,
+    winner: Option[MatchResultCode])
+
 object SimpleSubscriber extends SimpleSubscriberInterface {
   def set_initial = {}
   def observe = {}
@@ -28,14 +58,43 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
   
   import net.liftweb.json._
 
-  def set_initial(data: JObject) = () // println(data)
-  def observe(data: JObject) = () // println(data)
+  def set_initial(data: JObject) = extractMinimal(data)
+  def observe(data: JObject) = extractMinimal(data)
+
+  def extractMinimal(data: JObject): Option[PelitaMatchMinimal] = {
+    val JArray(teams) = data \ "universe" \ "__value__" \ "teams"
+    val names = for {
+      JString(name) <- teams.map(_ \ "__value__" \ "name")
+    } yield name
+    val score = for {
+      JInt(score) <- teams.map(_ \ "__value__" \ "score")
+    } yield score.toInt
+
+    val JBool(finished) = data \ "game_state" \ "finished"
+    val matchResult: Option[MatchResultCode] =
+        if (finished) {
+          val team_wins = scala.util.Try { val JInt(team_wins) = data \ "game_state" \ "team_wins"; team_wins.toInt }.toOption
+          val game_draw = scala.util.Try { val JBool(game_draw) = data \ "game_state" \ "game_draw"; game_draw }.toOption
+          (team_wins, game_draw) match {
+            case (None, Some(true)) => Some(MatchDraw)
+            case (Some(0), None) => Some(MatchWinnerLeft)
+            case (Some(1), None) => Some(MatchWinnerRight)
+            case _ => None
+          }
+      } else None
+
+    val theTeams = names zip score map {
+      case (n, s) => PelitaTeamMinimal(n, s)
+    }
+
+    Some(PelitaMatchMinimal(theTeams(0), theTeams(1), matchResult))
+  }
   
-  def receive(s: String) = {
+  def receive(s: String, logger: ActorRef) = {
     parseOpt(s) map { json =>
       (json \ "__action__", json \ "__data__") match {
-        case (JString("set_initial"), data: JObject) => set_initial(data)
-        case (JString("observe"), data: JObject) => observe(data)
+        case (JString("set_initial"), data: JObject) => logger ! set_initial(data)
+        case (JString("observe"), data: JObject) => logger ! observe(data)
         case (JString("exit"), other) => exit
         case _ => // log.info("No match for json string.")
       }
@@ -59,7 +118,7 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   def exit = shipAction("exit")
 }
 
-class ZMQPelitaController(val controller: String, val subscriber: String) extends Actor {
+class ZMQPelitaController(val controller: String, val subscriber: String, val logger: ActorRef) extends Actor {
   import akka.zeromq._
   // ctrlListener should not receive anything but we’ll have it anyway
   val ctrlListener = context.actorOf(Props(new Actor {
@@ -73,7 +132,7 @@ class ZMQPelitaController(val controller: String, val subscriber: String) extend
   val subListener = context.actorOf(Props(new Actor {
     def receive: Receive = {
       case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ SimpleSubscriber.receive(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString)
+      case m: ZMQMessage ⇒ SimpleSubscriber.receive(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString, logger)
       case _             ⇒ //...
     }
   }))
@@ -96,8 +155,8 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
   implicit val ec = context.dispatcher
 
   object TestRunner extends Runner {
-    type GameType = ShortGame
-    val game = new ShortGame{}
+    type GameType = PelitaGame
+    val game = new PelitaGame{}
   }
  
   def doWork(workSender: ActorRef, msg: Any): Unit = {
@@ -105,8 +164,8 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
     
     Future {
       msg match {
-        case PlayGame(a, b) =>
-          val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber)))
+        case (PlayGame(a, b), logger: ActorRef) =>
+          val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber, logger)))
           c ! "play"
           c ! "exit"
           val result = TestRunner.playGame(Pairing(a, b), controller=Some(controller), subscriber=Some(subscriber)).unsafePerformIO

@@ -1,4 +1,4 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 
 import akka.actor.ActorSystem
 import akka.actor.Props

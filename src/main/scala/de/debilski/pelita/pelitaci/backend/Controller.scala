@@ -1,15 +1,15 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.actor.Props
 
 sealed trait ControllerMessage
-case class AddTeam(team: Team) extends ControllerMessage
+case class AddTeam(uri: String, fragment: String) extends ControllerMessage
 case class PlayGame(team1: Team, team2: Team) extends ControllerMessage
 
 class GameBalancer extends utils.workbalancer.Master {
   def receiveWork = {
-    case c @ PlayGame(a, b) ⇒ doWork(c)
+    case c @ (PlayGame(a, b), logger: ActorRef) ⇒ doWork(c)
   }
 }
 
@@ -25,7 +25,16 @@ class Controller extends Actor with ActorLogging {
   }
 
   def receive = {
-    case c @ PlayGame(a, b) ⇒ balancer.!(c)(sender)
+    case c @ PlayGame(a, b) ⇒ {
+      val logger = context.actorOf(Props[ValueLogger])
+      balancer.!((c, logger))(sender)
+    }
     case other ⇒ log.info(s"received unknown message: $other")
+  }
+}
+
+class ValueLogger extends Actor with ActorLogging {
+  def receive = {
+    case x => log.info(s"received: $x")
   }
 }

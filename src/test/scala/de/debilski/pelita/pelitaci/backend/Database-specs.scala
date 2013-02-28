@@ -1,7 +1,7 @@
-package de.debilski.pelita.CI
+package de.debilski.pelita.pelitaci.backend
 
 import org.specs2.mutable.Specification
-import de.debilski.pelita.CI.database.DBController
+import de.debilski.pelita.pelitaci.backend.database.DBController
 
 class DatabaseSpecs extends Specification{
   
