@@ -10,7 +10,7 @@ import net.liftweb.sitemap.{Menu, SiteMap}
 class Boot {
   def boot {
     // where to search snippet
-    LiftRules.addToPackages("de.debilski.pelita")
+    LiftRules.addToPackages("de.debilski.pelita.pelitaci.frontend")
 
     // Build SiteMap
     def sitemap(): SiteMap = SiteMap(
@@ -21,7 +21,7 @@ class Boot {
     LiftRules.htmlProperties.default.set((r: Req) =>
       new Html5Properties(r.userAgent))
 
-    import de.debilski.pelita.rest.Rest
+    import de.debilski.pelita.pelitaci.frontend.rest.Rest
     Rest.init()
   }
 }
