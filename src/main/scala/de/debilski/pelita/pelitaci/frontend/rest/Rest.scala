@@ -57,7 +57,7 @@ object Rest extends RestHelper {
       Some((id1, id2)) <- teamIds
       team1 <- lib.CI.db.getTeam(id1)
       team2 <- lib.CI.db.getTeam(id2)
-      res <- ask(lib.CI.backend, PlayGame(team1, team2)).mapTo[Int]
+      res <- ask(lib.CI.controller, PlayGame(team1, team2)).mapTo[Int]
     } yield JField("id", JInt(res))
   }
 

@@ -14,7 +14,7 @@ object CI {
   }
 
   val actorSystem = akka.actor.ActorSystem("Pelita-CI")
-  val backend = actorSystem.actorOf(akka.actor.Props[de.debilski.pelita.pelitaci.backend.Controller])
+  val controller = actorSystem.actorOf(akka.actor.Props[de.debilski.pelita.pelitaci.backend.Controller])
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()
 }
