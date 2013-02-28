@@ -65,9 +65,9 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRe
         tables.Teams.forInsert returning tables.Teams.id insert (uri, factory)
       } catch {
         case e: org.h2.jdbc.JdbcSQLException =>
-        (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
+          (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
       }
-    (Promise() success id).future
+    (Promise successful id).future
   }
 
   def getTeam(id: Int): Future[Team] = db withSession {
@@ -75,7 +75,6 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRe
   }
   
   def getTeams: Future[Seq[Team]] = db withSession {
-    // Future successful (for (t <- tables.Teams) yield t).list.toSeq
     (Promise() complete scala.util.Try((for (t <- tables.Teams) yield t).list.toSeq)).future
   }
 }
