@@ -42,7 +42,7 @@ abstract class Runner {
 
     val repo = new java.net.URI(uri)
 
-    val commit = repo.getFragment
+    val commit = Option(repo.getFragment) getOrElse "master"
     val repository = new java.net.URI(repo.getScheme, repo.getSchemeSpecificPart, null).toString // null???
     val depth = 2
   
