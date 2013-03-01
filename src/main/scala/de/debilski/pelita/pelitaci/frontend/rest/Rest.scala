@@ -20,6 +20,10 @@ object Rest extends RestHelper {
   implicit def t2t(t: de.debilski.pelita.pelitaci.backend.database.Team): de.debilski.pelita.pelitaci.backend.Team = {
     de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
   }
+  implicit def t2json(t: de.debilski.pelita.pelitaci.backend.database.Team): net.liftweb.json.JValue = {
+    import net.liftweb.json.JsonDSL._
+    ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory)
+  }
 
   def init() : Unit = {
     LiftRules.statelessDispatch.append(Rest)
@@ -59,7 +63,7 @@ object Rest extends RestHelper {
       team1 <- lib.CI.db.getTeam(id1)
       team2 <- lib.CI.db.getTeam(id2)
       res <- ask(lib.CI.controller, PlayGame(team1, team2)).mapTo[QueuedMatch]
-    } yield ("uuid" -> res.uuid.map(_.toString)) ~ ("queueTime" -> res.queueTime.map(_.toString))
+    } yield ("uuid" -> res.uuid.map(_.toString)) ~ ("queueTime" -> res.queueTime.map(_.toString)) ~ ("teamA" -> team1) ~ ("teamB" -> team2)
   }
 
 
