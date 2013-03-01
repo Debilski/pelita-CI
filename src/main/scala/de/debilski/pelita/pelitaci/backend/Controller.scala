@@ -21,8 +21,8 @@ class Controller extends Actor with ActorLogging {
   val balancer = context.actorOf(Props[GameBalancer], name = "gamebalancer")
   def worker(controller: String, subscriber: String) = context.actorOf(Props(new PelitaInterface.Worker(balancer.path)(controller, subscriber)))
 
-  val basePort = 51100
-  val numWorkers = 2
+  def basePort = 51100
+  def numWorkers = 2
 
   val eventBus = new MessageBus
 
