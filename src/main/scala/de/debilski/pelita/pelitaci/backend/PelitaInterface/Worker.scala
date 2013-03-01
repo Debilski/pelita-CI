@@ -90,11 +90,11 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
     Some(PelitaMatchMinimal(theTeams(0), theTeams(1), matchResult))
   }
   
-  def receive(s: String, logger: ActorRef) = {
+  def receive(s: String, logger: MessageBus) = {
     parseOpt(s) map { json =>
       (json \ "__action__", json \ "__data__") match {
-        case (JString("set_initial"), data: JObject) => logger ! set_initial(data)
-        case (JString("observe"), data: JObject) => logger ! observe(data)
+        case (JString("set_initial"), data: JObject) => logger publishGlobal set_initial(data)
+        case (JString("observe"), data: JObject) => logger publishGlobal observe(data)
         case (JString("exit"), other) => exit
         case _ => // log.info("No match for json string.")
       }
@@ -118,7 +118,7 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   def exit = shipAction("exit")
 }
 
-class ZMQPelitaController(val controller: String, val subscriber: String, val logger: ActorRef) extends Actor {
+class ZMQPelitaController(val controller: String, val subscriber: String, val logger: MessageBus) extends Actor {
   import akka.zeromq._
   // ctrlListener should not receive anything but we’ll have it anyway
   val ctrlListener = context.actorOf(Props(new Actor {
@@ -164,7 +164,7 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
     
     Future {
       msg match {
-        case (PlayGame(a, b), logger: ActorRef) =>
+        case (PlayGame(a, b), logger: MessageBus) =>
           val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber, logger)))
           c ! "play"
           c ! "exit"

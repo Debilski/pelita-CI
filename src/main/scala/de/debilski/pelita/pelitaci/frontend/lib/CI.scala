@@ -3,6 +3,7 @@ package lib
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.liftweb.http.CometActor
+import de.debilski.pelita.pelitaci.backend.SubscribeGlobal
 
 object CI {
   case class TeamsList(teams: Seq[de.debilski.pelita.pelitaci.backend.Team])
@@ -17,4 +18,11 @@ object CI {
   val controller = actorSystem.actorOf(akka.actor.Props[de.debilski.pelita.pelitaci.backend.Controller])
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()
+
+  val listener = actorSystem.actorOf(akka.actor.Props(new akka.actor.Actor {
+    def receive = {
+      case msg => println(s"---> $msg")
+    }
+  }))
+  controller ! SubscribeGlobal(listener)
 }
