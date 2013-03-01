@@ -99,10 +99,12 @@ abstract class Runner {
         
         Files.createDirectory(team1Path)
         Files.createDirectory(team2Path)
-        
-        cloneRepo(team1.uri, team1Path.toFile).!
-        cloneRepo(team2.uri, team2Path.toFile).!
-        
+
+        val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
+
+        cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
+        cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
+
         val team1Spec = team1Path.resolve(team1.factory).toFile.toString
         val team2Spec = team2Path.resolve(team2.factory).toFile.toString
         
