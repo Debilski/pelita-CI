@@ -37,6 +37,8 @@ abstract class Worker(masterLocation: ActorPath)
   // This is how our derivations will interact with us.  It
   // allows derivations to complete work asynchronously
   case class WorkComplete(result: Any)
+  case class WorkCouldNotRun(result: Any)
+  case class WorkFailed(result: Any)
  
   // Required to be implemented
   def doWork(workSender: ActorRef, work: Any): Unit
@@ -56,8 +58,12 @@ abstract class Worker(masterLocation: ActorPath)
     case WorkToBeDone(_) =>
       log.error("Yikes. Master told me to do work, while I’m working.")
     // Our derivation has completed its task
-    case WorkComplete(result) =>
-      log.info("Work is complete. Result {}.", result)
+    case m@(WorkComplete(_)|WorkCouldNotRun(_)|WorkFailed(_)) =>
+      m match {
+        case WorkComplete(result) => log.info("Work is complete. Result {}.", result)
+        case WorkCouldNotRun(result) => log.warning("Work could not be run: {}", result)
+        case WorkFailed(result) => log.error("Work failed: {}", result)
+      }
       master ! WorkIsDone(self)
       master ! WorkerRequestsWork(self)
       // We’re idle now

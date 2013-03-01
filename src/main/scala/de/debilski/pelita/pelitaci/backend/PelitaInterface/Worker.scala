@@ -154,6 +154,8 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
   // You can use whatever you want.
   implicit val ec = context.dispatcher
 
+  override def preRestart(reason: Throwable, message: Option[Any]) = log.info(s"Restarting due to $reason. ($message)")
+
   object TestRunner extends Runner {
     type GameType = PelitaGame
     val game = new PelitaGame{}
@@ -170,8 +172,13 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
           c ! "exit"
           val result = TestRunner.playGame(Pairing(a, b), controller=Some(controller), subscriber=Some(subscriber)).unsafePerformIO
           workSender ! result
+          WorkComplete("done")
+        case msg =>
+          WorkCouldNotRun(s"Did not understand message: $msg")
       }
-      WorkComplete("done")
+    } recover {
+      case e =>
+        WorkFailed(s"Work Failed: $e")
     } pipeTo self
   }
 }
