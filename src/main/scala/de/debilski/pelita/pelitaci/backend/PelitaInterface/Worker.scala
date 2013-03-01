@@ -166,7 +166,7 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
     
     Future {
       msg match {
-        case (PlayGame(a, b), logger: MessageBus) =>
+        case (QueuedMatch(uuid, a, b, qT, rT), logger: MessageBus) =>
           val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber, logger)))
           c ! "play"
           c ! "exit"

@@ -11,7 +11,7 @@ import scala.concurrent.Future
 
 import akka.pattern.ask
 
-import de.debilski.pelita.pelitaci.backend.{PlayGame, AddTeam}
+import de.debilski.pelita.pelitaci.backend.{QueuedMatch, PlayGame, AddTeam}
 import net.liftweb.util.Schedule
 
 
@@ -50,6 +50,7 @@ object Rest extends RestHelper {
 
     import akka.util.Timeout
     import scala.concurrent.duration.Duration
+    import net.liftweb.json.JsonDSL._
 
     implicit val timeout = Timeout(5000L)
 
@@ -57,8 +58,8 @@ object Rest extends RestHelper {
       Some((id1, id2)) <- teamIds
       team1 <- lib.CI.db.getTeam(id1)
       team2 <- lib.CI.db.getTeam(id2)
-      res <- ask(lib.CI.controller, PlayGame(team1, team2)).mapTo[Int]
-    } yield JField("id", JInt(res))
+      res <- ask(lib.CI.controller, PlayGame(team1, team2)).mapTo[QueuedMatch]
+    } yield ("uuid" -> res.uuid.map(_.toString)) ~ ("queueTime" -> res.queueTime.map(_.toString))
   }
 
 

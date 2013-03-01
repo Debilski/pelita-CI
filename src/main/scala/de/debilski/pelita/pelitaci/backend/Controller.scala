@@ -3,14 +3,17 @@ package de.debilski.pelita.pelitaci.backend
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.actor.Props
 import akka.event.{ActorEventBus, LookupClassification}
+import java.util.UUID
 
 sealed trait ControllerMessage
 case class AddTeam(uri: String, fragment: String) extends ControllerMessage
 case class PlayGame(team1: Team, team2: Team) extends ControllerMessage
+case class PlayMatch(queuedMatch: QueuedMatch) extends ControllerMessage
+case class QueuedMatch(uuid: Option[UUID], teamA: Team, teamB: Team, queueTime: Option[java.util.Date], resultTime: Option[java.util.Date])
 
 class GameBalancer extends utils.workbalancer.Master {
   def receiveWork = {
-    case c @ (PlayGame(a, b), logger: MessageBus) ⇒ doWork(c)
+    case c @ (queuedMatch: QueuedMatch, logger: MessageBus) ⇒ doWork(c)
   }
 }
 
@@ -35,7 +38,9 @@ class Controller extends Actor with ActorLogging {
     case UnsubscribeAll(subscriber: ActorRef) => eventBus.unsubscribe(subscriber)
 
     case c @ PlayGame(a, b) ⇒ {
-      balancer.!((c, eventBus))(sender)
+      val queuedMatch = QueuedMatch(Option(java.util.UUID.randomUUID), a, b, Option(new java.util.Date), None)
+      balancer.!((queuedMatch, eventBus))(sender)
+      sender ! queuedMatch
     }
     case other ⇒ log.info(s"received unknown message: $other")
   }

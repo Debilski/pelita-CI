@@ -2,9 +2,10 @@ package de.debilski.pelita.pelitaci.backend.database
 
 import scala.slick.driver.H2Driver.simple._
 import Database.threadLocalSession
+import java.util.UUID
 
 case class Team(id: Option[Int], uri: String, factory: String)
-case class Match(id: Option[Int], teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp])
+case class Match(uuid: Option[UUID], teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp])
 
 class Tables { 
   object Teams extends Table[Team]("TEAMS") {
@@ -18,12 +19,12 @@ class Tables {
   }
   
   object Matches extends Table[Match]("MATCHES") {
-    def id = column[Int]("MATCH_ID", O.PrimaryKey, O.AutoInc)
+    def uuid = column[UUID]("MATCH_ID", O.PrimaryKey, O.AutoInc)
     def teamA_id = column[Int]("TEAMA_ID")
     def teamB_id = column[Int]("TEAMB_ID")
     def result = column[Int]("RESULT")
     def timestamp = column[java.sql.Timestamp]("TIMESTAMP")
-    def * = id.? ~ teamA_id ~ teamB_id ~ result ~ timestamp.? <> (Match, Match.unapply _)
+    def * = uuid.? ~ teamA_id ~ teamB_id ~ result ~ timestamp.? <> (Match, Match.unapply _)
     
     def teamA = foreignKey("TEAMA_ID_FK", teamA_id, Teams)(_.id)
     def teamB = foreignKey("TEAMB_ID_FK", teamB_id, Teams)(_.id)
