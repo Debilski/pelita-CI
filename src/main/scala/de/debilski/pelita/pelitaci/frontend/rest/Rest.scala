@@ -41,6 +41,10 @@ object Rest extends RestHelper {
     }
   }
 
+  def getTeam(teamId: Int): Future[JValue] = {
+    for { team <- lib.CI.db.getTeam(teamId) } yield t2json(team)
+  }
+
   def scheduleMatch(json: net.liftweb.json.JsonAST.JValue): Future[JValue] = {
     val teamIds = Future {
       val JArray(ids) = json
@@ -79,6 +83,7 @@ object Rest extends RestHelper {
 
   serve("rest" :: Nil prefix {
     case "team" :: "add" :: Nil JsonPost json -> _ => asyncFuture(25)(addTeam(json))
+    case "team" :: AsInt(teamId) :: Nil JsonGet _ => asyncFuture(25)(getTeam(teamId))
     case "match" :: "schedule" :: Nil JsonPost json -> _ => asyncFuture(25)(scheduleMatch(json))
   })
 }
