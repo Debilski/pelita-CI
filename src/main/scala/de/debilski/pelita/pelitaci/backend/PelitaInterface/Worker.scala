@@ -70,24 +70,28 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
       JInt(score) <- teams.map(_ \ "__value__" \ "score")
     } yield score.toInt
 
-    val JBool(finished) = data \ "game_state" \ "finished"
-    val matchResult: Option[MatchResultCode] =
-        if (finished) {
-          val team_wins = scala.util.Try { val JInt(team_wins) = data \ "game_state" \ "team_wins"; team_wins.toInt }.toOption
-          val game_draw = scala.util.Try { val JBool(game_draw) = data \ "game_state" \ "game_draw"; game_draw }.toOption
-          (team_wins, game_draw) match {
-            case (None, Some(true)) => Some(MatchDraw)
-            case (Some(0), None) => Some(MatchWinnerLeft)
-            case (Some(1), None) => Some(MatchWinnerRight)
-            case _ => None
-          }
-      } else None
-
     val theTeams = names zip score map {
       case (n, s) => PelitaTeamMinimal(n, s)
     }
 
-    Some(PelitaMatchMinimal(theTeams(0), theTeams(1), matchResult))
+    if ((data \ "game_state").isInstanceOf[JField]) {
+      val JBool(finished) = data \ "game_state" \ "finished"
+      val matchResult: Option[MatchResultCode] =
+          if (finished) {
+            val team_wins = scala.util.Try { val JInt(team_wins) = data \ "game_state" \ "team_wins"; team_wins.toInt }.toOption
+            val game_draw = scala.util.Try { val JBool(game_draw) = data \ "game_state" \ "game_draw"; game_draw }.toOption
+            (team_wins, game_draw) match {
+              case (None, Some(true)) => Some(MatchDraw)
+              case (Some(0), None) => Some(MatchWinnerLeft)
+              case (Some(1), None) => Some(MatchWinnerRight)
+              case _ => None
+            }
+        } else None
+
+      Some(PelitaMatchMinimal(theTeams(0), theTeams(1), matchResult))
+    } else {
+      Some(PelitaMatchMinimal(theTeams(0), theTeams(1), None))
+    }
   }
   
   def receive(s: String, logger: MessageBus) = {
