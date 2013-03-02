@@ -72,11 +72,12 @@ object Rest extends RestHelper {
 
 
   def asyncFuture[T <% net.liftweb.http.LiftResponse](timeout: Int)(fut: Future[T]) = RestContinuation.async { f => {
-    Schedule.schedule(() => f(JNull), timeout.seconds)
+    val timedOut = Schedule.schedule(() => f(JNull), timeout.seconds)
+    def finish(v: net.liftweb.http.LiftResponse) { timedOut.cancel(false); f(v) }
 
-    fut andThen {
-      case scala.util.Success(v) => f(v)
-      case scala.util.Failure(e) => f(JString(e.toString))
+    fut onComplete {
+      case scala.util.Success(v) => finish(v)
+      case scala.util.Failure(e) => finish(JString(e.toString))
     }
   }
   }
