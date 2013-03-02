@@ -21,6 +21,10 @@ class Boot {
     LiftRules.htmlProperties.default.set((r: Req) =>
       new Html5Properties(r.userAgent))
 
+    // Init the Framework
+    import de.debilski.pelita.pelitaci.frontend.lib.CI
+    CI
+
     import de.debilski.pelita.pelitaci.frontend.rest.Rest
     Rest.init()
   }
