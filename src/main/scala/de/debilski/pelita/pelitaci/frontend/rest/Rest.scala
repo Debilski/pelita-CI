@@ -32,10 +32,10 @@ object Rest extends RestHelper {
   def addTeam(json: net.liftweb.json.JsonAST.JValue): Future[JValue] = {
     Future {
       val JString(uri) = json \ "uri"
-      val JString(fragment) = json \ "fragment"
-      (uri, fragment)
+      val JString(factory) = json \ "factory"
+      (uri, factory)
     } flatMap {
-      case (uri, fragment) => lib.CI.db.addTeam(uri, fragment)
+      case (uri, factory) => lib.CI.db.addTeam(uri, factory)
     } map {
       id => JField("id", JInt(id))
     }
