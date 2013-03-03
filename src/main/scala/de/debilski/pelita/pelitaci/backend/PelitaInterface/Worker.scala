@@ -2,7 +2,7 @@ package de.debilski.pelita.pelitaci.backend
 package PelitaInterface
 
 import scala.concurrent.Future
-import akka.actor.{ Actor, ActorRef, ActorSystem, Props, ActorLogging, ActorPath }
+import akka.actor._
 import akka.pattern.pipe
 import akka.event.Logging
 
@@ -172,10 +172,15 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
       msg match {
         case (QueuedMatch(uuid, a, b, qT, rT), logger: MessageBus) =>
           val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber, logger)))
-          c ! "play"
-          c ! "exit"
-          val result = TestRunner.playGame(Pairing(a, b), controller=Some(controller), subscriber=Some(subscriber)).unsafePerformIO
-          workSender ! result
+          try {
+            c ! "play"
+            c ! "exit"
+            val result = TestRunner.playGame(Pairing(a, b), controller=Some(controller), subscriber=Some(subscriber)).unsafePerformIO
+            workSender ! result
+          } finally {
+            // ensure that we kill the controller again
+            c ! PoisonPill
+          }
           WorkComplete("done")
         case msg =>
           WorkCouldNotRun(s"Did not understand message: $msg")
