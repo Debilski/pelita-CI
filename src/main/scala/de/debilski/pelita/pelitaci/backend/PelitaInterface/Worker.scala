@@ -74,7 +74,7 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
       case (n, s) => PelitaTeamMinimal(n, s)
     }
 
-    if ((data \ "game_state").isInstanceOf[JField]) {
+    if ((data \ "game_state").isInstanceOf[JObject]) {
       val JBool(finished) = data \ "game_state" \ "finished"
       val matchResult: Option[MatchResultCode] =
           if (finished) {
