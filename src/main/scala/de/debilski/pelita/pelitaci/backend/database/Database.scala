@@ -44,20 +44,24 @@ trait DBController {
   def getTeams: Future[Seq[Team]]
 }
 
-class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRestart {
+class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRestart {
   val log = Logging(TypedActor.context.system, TypedActor.context.self)
 
   def preRestart(reason: Throwable,message: Option[Any]) = log.info(s"DBController restarted: reason: $reason, msg: $message")
   
-  val db = Database.forURL(dbURI, driver = "org.h2.Driver")
+  val db = Database.forURL(dbURL, driver = "org.h2.Driver")
   val tables = new Tables
 
   import TypedActor.dispatcher
   
   def createDB(): Unit = {
     db withSession {
-      log.info("DB created")
-      (tables.Teams.ddl ++ tables.Matches.ddl).create
+      log.info("Creating database")
+      try {
+        (tables.Teams.ddl ++ tables.Matches.ddl).create
+      } catch {
+        case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL.}")
+      }
     }
   }
   
@@ -81,6 +85,6 @@ class DBControllerImpl(dbURI: String) extends DBController with TypedActor.PreRe
 }
 
 object DBController {
-  def createActor(system: ActorSystem)(dbURI: String): DBController = TypedActor(system).typedActorOf(TypedProps(classOf[DBController], new DBControllerImpl(dbURI)))
+  def createActor(system: ActorSystem)(dbURL: String): DBController = TypedActor(system).typedActorOf(TypedProps(classOf[DBController], new DBControllerImpl(dbURL)))
 }
 
