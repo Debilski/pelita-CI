@@ -102,11 +102,13 @@ abstract class Runner {
 
         val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
 
-        cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
-        cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
+        if (!team1.uri.isEmpty)
+          cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
+        if (!team2.uri.isEmpty)
+          cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
 
-        val team1Spec = team1Path.resolve(team1.factory).toFile.toString
-        val team2Spec = team2Path.resolve(team2.factory).toFile.toString
+        val team1Spec = if (!team1.uri.isEmpty) team1Path.resolve(team1.factory).toFile.toString else team1.factory
+        val team2Spec = if (!team2.uri.isEmpty) team2Path.resolve(team2.factory).toFile.toString else team2.factory
         
         val lines = game.run(team1Spec, team2Spec, controller, subscriber).lines
         
