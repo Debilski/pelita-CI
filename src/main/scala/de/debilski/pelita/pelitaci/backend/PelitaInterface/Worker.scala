@@ -179,7 +179,9 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
             workSender ! result
           } finally {
             // ensure that we kill the controller again
-            c ! PoisonPill
+            context.system.stop(c)
+            // also, sleep for, say 10 seconds, to ensure the zmq socket is really closed
+            Thread.sleep(10000)
           }
           WorkComplete("done")
         case msg =>
