@@ -60,7 +60,7 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
       try {
         (tables.Teams.ddl ++ tables.Matches.ddl).create
       } catch {
-        case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL.}")
+        case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL.")
       }
     }
   }
