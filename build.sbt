@@ -37,6 +37,8 @@ libraryDependencies ++= {
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 
+libraryDependencies += "org.specs2" %% "specs2" % "1.14" % "test"
+
 autoCompilerPlugins := true
 
 libraryDependencies <+= scalaVersion {
