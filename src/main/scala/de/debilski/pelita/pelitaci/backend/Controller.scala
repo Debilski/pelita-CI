@@ -37,6 +37,8 @@ class Controller extends Actor with ActorLogging {
       balancer.!((queuedMatch, eventBus))(sender)
       sender ! queuedMatch
     }
+    case nwc :utils.workbalancer.InfoMessages.NumWorkersChanged => eventBus.publishGlobal(nwc)
+    case qsc :utils.workbalancer.InfoMessages.QueueSizeChanged => eventBus.publishGlobal(qsc)
     case other ⇒ log.info(s"received unknown message: $other")
   }
 }

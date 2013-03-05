@@ -27,6 +27,11 @@ object MasterWorkerProtocol {
   case object NoWorkToBeDone
 }
 
+object InfoMessages {
+  case class QueueSizeChanged(size: Int)
+  case class NumWorkersChanged(size: Int)
+}
+
 abstract class Worker(masterLocation: ActorPath)
   extends Actor with ActorLogging {
   import MasterWorkerProtocol._
@@ -93,6 +98,7 @@ abstract class Worker(masterLocation: ActorPath)
 
 abstract class Master extends Actor with ActorLogging {
   import MasterWorkerProtocol._
+  import InfoMessages._
   import scala.collection.mutable.{Map, Queue}
  
   // Holds known workers and what they may be working on
@@ -111,6 +117,16 @@ abstract class Master extends Actor with ActorLogging {
       }
     }
   }
+
+  // Notifies the parent that the queue size changed
+  def notifyQueueSize(): Unit = {
+    context.parent ! QueueSizeChanged(workQ.size)
+  }
+
+  // Notifies the parent that the number of workers changed
+  def notifyNumWorkers(): Unit = {
+    context.parent ! NumWorkersChanged(workers.size)
+  }
  
   private[this] def receiveProtocol: Receive = {
     // Worker is alive. Add it to the list, watch it for
@@ -119,6 +135,7 @@ abstract class Master extends Actor with ActorLogging {
       log.info("Worker created: {}", worker)
       context.watch(worker)
       workers += (worker -> None)
+      notifyNumWorkers()
       notifyWorkers()
  
     // A worker wants more work. If we know about it, it’s not
@@ -131,7 +148,9 @@ abstract class Master extends Actor with ActorLogging {
           worker ! NoWorkToBeDone
         else if (workers(worker) == None) {
           val (workSender, work) = workQ.dequeue()
+          notifyQueueSize()
           workers += (worker -> Some(workSender -> work))
+          notifyNumWorkers()
           // Use the special form of ‘tell’ that lets us supply
           // the sender
           worker.tell(WorkToBeDone(work), workSender)
@@ -142,8 +161,10 @@ abstract class Master extends Actor with ActorLogging {
     case WorkIsDone(worker) =>
       if (!workers.contains(worker))
         log.error("Blurgh! {} said it's done work but we didn't know about it", worker)
-      else
+      else {
         workers += (worker -> None)
+        notifyNumWorkers()
+      }
  
     // A worker died. If it was doing anything then we need
     // to give it to someone else so we just add it back to the
@@ -156,6 +177,7 @@ abstract class Master extends Actor with ActorLogging {
         self.tell(work, workSender)
       }
       workers -= worker
+      notifyNumWorkers()
   }
   
   def receiveWork: Receive
@@ -165,6 +187,7 @@ abstract class Master extends Actor with ActorLogging {
   def doWork(work: Any) = {
     log.info("Queueing {}", work)
     workQ.enqueue(sender -> work)
+    notifyQueueSize()
     notifyWorkers()
   }
 }
