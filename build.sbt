@@ -64,3 +64,5 @@ libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.9" % "runtime
 seq(coffeeSettings: _*)
 
 (resourceManaged in (Compile, CoffeeKeys.coffee)) <<= (webappResources in Compile)(_.get.head / "js")
+
+Compass.settings
