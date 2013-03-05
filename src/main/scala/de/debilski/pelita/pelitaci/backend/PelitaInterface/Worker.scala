@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import akka.actor._
 import akka.pattern.pipe
 import akka.event.Logging
+import java.util.UUID
 
 trait SimpleControllerInterface {
   def set_initial
@@ -94,11 +95,17 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
     }
   }
   
-  def receive(s: String, logger: MessageBus) = {
+  def receive(uuid: UUID, s: String, logger: MessageBus) = {
     parseOpt(s) map { json =>
       (json \ "__action__", json \ "__data__") match {
-        case (JString("set_initial"), data: JObject) => logger publishGlobal set_initial(data)
-        case (JString("observe"), data: JObject) => logger publishGlobal observe(data)
+        case (JString("set_initial"), data: JObject) => {
+          val d = set_initial(data)
+          logger publishGlobal (uuid, d)
+        }
+        case (JString("observe"), data: JObject) => {
+          val d = observe(data)
+          logger publishGlobal (uuid, d)
+        }
         case (JString("exit"), other) => exit
         case _ => // log.info("No match for json string.")
       }
@@ -122,7 +129,9 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   def exit = shipAction("exit")
 }
 
-class ZMQPelitaController(val controller: String, val subscriber: String, val logger: MessageBus) extends Actor {
+class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
+  override def postStop() = log.info(s"Stopped controller for $controller/$subscriber.")
+
   import akka.zeromq._
   // ctrlListener should not receive anything but we’ll have it anyway
   val ctrlListener = context.actorOf(Props(new Actor {
@@ -136,13 +145,13 @@ class ZMQPelitaController(val controller: String, val subscriber: String, val lo
   val subListener = context.actorOf(Props(new Actor {
     def receive: Receive = {
       case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ SimpleSubscriber.receive(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString, logger)
+      case m: ZMQMessage ⇒ SimpleSubscriber.receive(uuid, akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString, logger)
       case _             ⇒ //...
     }
   }))
   println(s"using ports $controller, $subscriber")
-  val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, Listener(ctrlListener), Connect(controller))
-  val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, Listener(subListener), Connect(subscriber), SubscribeAll)
+  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, Listener(ctrlListener), Connect(controller))
+  private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, Listener(subListener), Connect(subscriber), SubscribeAll)
   
   val controllerSender = new SimpleController(ctrlSocket)
   
@@ -171,7 +180,8 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
     Future {
       msg match {
         case (QueuedMatch(uuid, a, b, qT, rT), logger: MessageBus) =>
-          val c = context.actorOf(Props(new ZMQPelitaController(controller, subscriber, logger)))
+          val c = context.actorOf(Props(new ZMQPelitaController(uuid getOrElse java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                                                                controller, subscriber, logger)))
           try {
             c ! "play"
             c ! "exit"
