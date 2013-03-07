@@ -63,6 +63,8 @@ libraryDependencies ++= List(
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.9" % "runtime"
 
+libraryDependencies += "org.codehaus.janino" % "janino" % "2.6.1"
+
 seq(coffeeSettings: _*)
 
 (resourceManaged in (Compile, CoffeeKeys.coffee)) <<= (webappResources in Compile)(_.get.head / "js")
