@@ -183,9 +183,16 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
           val c = context.actorOf(Props(new ZMQPelitaController(uuid getOrElse java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"),
                                                                 controller, subscriber, logger)))
           try {
-            c ! "play"
-            c ! "exit"
-            val result = TestRunner.playGame(Pairing(a, b), controller=Some(controller), subscriber=Some(subscriber)).unsafePerformIO
+            val resultIO = TestRunner.withPreparedGame(Pairing(a, b)) { preparedGame =>
+              c ! "set_initial"
+              c ! "play"
+              c ! "exit"
+
+              TestRunner.playPreparedGame(controller=Some(controller), subscriber=Some(subscriber))(preparedGame)
+            }
+
+            val result = resultIO.unsafePerformIO
+
             workSender ! result
           } finally {
             // ensure that we kill the controller again

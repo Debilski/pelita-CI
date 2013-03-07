@@ -56,7 +56,7 @@ abstract class Runner {
     Process(cmd, cwd=cwd)
   }
   
-  def doWithTempDirectory[T](prefix: String)(action: java.nio.file.Path => IO[T]): IO[T] = {
+  def withTemporaryDirectory[T](prefix: String)(action: java.nio.file.Path => IO[T]): IO[T] = {
     import java.nio.file.Files
     
     
@@ -84,45 +84,50 @@ abstract class Runner {
     } yield res
     
   }
-  
-  def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[Option[MatchResult]] = {
-    import scala.sys.process.Process
-    
+
+  case class PreparedGame(pairing: Pairing, teamSpecs: (String, String))
+
+  def withPreparedGame[T](pairing: Pairing)(f: PreparedGame => IO[Option[T]]): IO[Option[T]] = {
     val Pairing(team1: Team, team2: Team) = pairing
-    
-    
-    import java.nio.file.Files
-    
-    doWithTempDirectory("pelita-CI-") { tempDir => IO {
-        val team1Path = tempDir.resolve("t1")
-        val team2Path = tempDir.resolve("t2")
-        
-        Files.createDirectory(team1Path)
-        Files.createDirectory(team2Path)
 
-        val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
+    withTemporaryDirectory("pelita-CI-") { tempDir => IO {
 
-        if (!team1.uri.isEmpty)
-          cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
-        if (!team2.uri.isEmpty)
-          cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
+      import java.nio.file.Files
 
-        val team1Spec = if (!team1.uri.isEmpty) team1Path.resolve(team1.factory).toFile.toString else team1.factory
-        val team2Spec = if (!team2.uri.isEmpty) team2Path.resolve(team2.factory).toFile.toString else team2.factory
-        
-        val lines = game.run(team1Spec, team2Spec, controller, subscriber).lines
-        
-        lines foreach println
-        val pelitaOutput = lines.lastOption
-        
-        pelitaOutput flatMap { _ match {
-            case "-" => Some(MatchDraw)
-            case "0" => Some(MatchWinnerLeft)
-            case "1" => Some(MatchWinnerRight)
-            case _ => None
-          }
-        } map (res => MatchResult(pairing, res))
-      }
-    }
+      val team1Path = tempDir.resolve("t1")
+      val team2Path = tempDir.resolve("t2")
+
+      Files.createDirectory(team1Path)
+      Files.createDirectory(team2Path)
+
+      val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
+
+      if (!team1.uri.isEmpty)
+        cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
+      if (!team2.uri.isEmpty)
+        cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
+
+      val team1Spec = if (!team1.uri.isEmpty) team1Path.resolve(team1.factory).toFile.toString else team1.factory
+      val team2Spec = if (!team2.uri.isEmpty) team2Path.resolve(team2.factory).toFile.toString else team2.factory
+
+      (team1Spec, team2Spec)
+    } flatMap (teamSpecs => f(PreparedGame(pairing, teamSpecs)))
+  }}
+
+  def playPreparedGame(controller: Option[String]=None, subscriber: Option[String]=None): PreparedGame => IO[Option[MatchResult]] = preparedGame => IO {
+    val lines = game.run(preparedGame.teamSpecs._1, preparedGame.teamSpecs._2, controller, subscriber).lines
+
+    lines foreach println
+    val pelitaOutput = lines.lastOption
+
+    pelitaOutput flatMap {
+      case "-" => Some(MatchDraw)
+      case "0" => Some(MatchWinnerLeft)
+      case "1" => Some(MatchWinnerRight)
+      case _ => None
+    } map (res => MatchResult(preparedGame.pairing, res))
   }
+
+  def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[Option[MatchResult]] =
+    withPreparedGame(pairing)(playPreparedGame(controller, subscriber))
 }
