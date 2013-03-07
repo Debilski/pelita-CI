@@ -16,13 +16,11 @@ import net.liftweb.util.Schedule
 
 
 object Rest extends RestHelper {
+  implicit class Team2Json(t: de.debilski.pelita.pelitaci.backend.database.Team) {
+    def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
 
-  implicit def t2t(t: de.debilski.pelita.pelitaci.backend.database.Team): de.debilski.pelita.pelitaci.backend.Team = {
-    de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
-  }
-  implicit def t2json(t: de.debilski.pelita.pelitaci.backend.database.Team): net.liftweb.json.JValue = {
     import net.liftweb.json.JsonDSL._
-    ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory)
+    def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory)
   }
 
   def init() : Unit = {
@@ -42,7 +40,7 @@ object Rest extends RestHelper {
   }
 
   def getTeam(teamId: Int): Future[JValue] = {
-    for { team <- lib.CI.db.getTeam(teamId) } yield t2json(team)
+    for { team <- lib.CI.db.getTeam(teamId) } yield team.toJson
   }
 
   def scheduleMatch(json: net.liftweb.json.JsonAST.JValue): Future[JValue] = {
@@ -66,8 +64,8 @@ object Rest extends RestHelper {
       Some((id1, id2)) <- teamIds
       team1 <- lib.CI.db.getTeam(id1)
       team2 <- lib.CI.db.getTeam(id2)
-      res <- ask(lib.CI.controller, PlayGame(team1, team2)).mapTo[QueuedMatch]
-    } yield ("uuid" -> res.uuid.map(_.toString)) ~ ("queueTime" -> res.queueTime.map(_.toString)) ~ ("teamA" -> team1) ~ ("teamB" -> team2)
+      res <- ask(lib.CI.controller, PlayGame(team1.toTeam, team2.toTeam)).mapTo[QueuedMatch]
+    } yield ("uuid" -> res.uuid.map(_.toString)) ~ ("queueTime" -> res.queueTime.map(_.toString)) ~ ("teamA" -> team1.toJson) ~ ("teamB" -> team2.toJson)
   }
 
 
