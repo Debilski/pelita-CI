@@ -6,20 +6,21 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.event.Logging
 import java.util.UUID
+import net.liftweb.json._
 
 trait SimpleControllerInterface {
-  def set_initial
-  def play
-  def play_round
-  def play_step
-  def update_viewers
-  def exit
+  def set_initial()
+  def play()
+  def play_round()
+  def play_step()
+  def update_viewers()
+  def exit()
 }
 
 trait SimpleSubscriberInterface {
-  def set_initial
-  def observe
-  def exit
+  def set_initial(data: JObject)
+  def observe(data: JObject)
+  def exit()
 }
 
 case class PelitaTeam(
@@ -52,15 +53,36 @@ case class PelitaMatchMinimal(
     teamB: PelitaTeamMinimal,
     winner: Option[MatchResultCode])
 
-object SimpleSubscriber extends SimpleSubscriberInterface {
-  def set_initial = {}
-  def observe = {}
-  def exit = {}
-  
-  import net.liftweb.json._
+case class PelitaMaze(
+    width: net.liftweb.json.JInt,
+    height: net.liftweb.json.JInt,
+    walls: net.liftweb.json.JArray)
 
-  def set_initial(data: JObject) = extractMinimal(data)
-  def observe(data: JObject) = extractMinimal(data)
+class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberInterface {
+
+  def set_initial(data: JObject) = {
+    val minimalMatch = extractMinimal(data)
+    logger publishGlobal (uuid, minimalMatch)
+
+    val maze = extractMaze(data)
+    maze foreach (mz => logger publishGlobal (uuid, mz))
+  }
+
+  def observe(data: JObject) = {
+    val minimalMatch = extractMinimal(data)
+    logger publishGlobal (uuid, minimalMatch)
+  }
+  def exit() = {}
+
+  def extractMaze(data: JObject): Option[PelitaMaze] = {
+    val width = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "width"
+    val height = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "height"
+    val maze = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "data"
+    (width, height, maze) match {
+      case (w: JInt, h: JInt, m: JArray) => Some(PelitaMaze(width=w, height=h, walls=m))
+      case _ => None
+    }
+  }
 
   def extractMinimal(data: JObject): Option[PelitaMatchMinimal] = {
     val JArray(teams) = data \ "universe" \ "__value__" \ "teams"
@@ -95,18 +117,12 @@ object SimpleSubscriber extends SimpleSubscriberInterface {
     }
   }
   
-  def receive(uuid: UUID, s: String, logger: MessageBus) = {
-    parseOpt(s) map { json =>
+  def receive(rawJson: String) = {
+    parseOpt(rawJson) map { json =>
       (json \ "__action__", json \ "__data__") match {
-        case (JString("set_initial"), data: JObject) => {
-          val d = set_initial(data)
-          logger publishGlobal (uuid, d)
-        }
-        case (JString("observe"), data: JObject) => {
-          val d = observe(data)
-          logger publishGlobal (uuid, d)
-        }
-        case (JString("exit"), other) => exit
+        case (JString("set_initial"), data: JObject) => set_initial(data)
+        case (JString("observe"), data: JObject) => observe(data)
+        case (JString("exit"), other) => exit()
         case _ => // log.info("No match for json string.")
       }
     } // getOrElse log.info("Could not parse json string.")
@@ -121,39 +137,33 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   }
   private[this] def shipAction(action: String) = ship(s"""{"__action__": "$action"}""")
   
-  def set_initial = shipAction("set_initial")
-  def play = shipAction("play")
-  def play_round = shipAction("play_round")
-  def play_step = shipAction("play_step")
-  def update_viewers = shipAction("update_viewers")
-  def exit = shipAction("exit")
+  def set_initial() = shipAction("set_initial")
+  def play() = shipAction("play")
+  def play_round() = shipAction("play_round")
+  def play_step() = shipAction("play_step")
+  def update_viewers() = shipAction("update_viewers")
+  def exit() = shipAction("exit")
 }
 
 class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
+  override def preStart() = log.info(s"ZMQPelitaController using ports $controller, $subscriber.")
   override def postStop() = log.info(s"Stopped controller for $controller/$subscriber.")
 
   import akka.zeromq._
-  // ctrlListener should not receive anything but we’ll have it anyway
-  val ctrlListener = context.actorOf(Props(new Actor {
-    def receive: Receive = {
-      case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ Logging(context.system, this).info(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString)
-      case _             ⇒ //...
-    } 
-  }))
-  
+
+  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, Connect(controller))
+  val controllerSender = new SimpleController(ctrlSocket)
+
   val subListener = context.actorOf(Props(new Actor {
+    val subscriptionReceiver = new SimpleSubscriber(uuid, logger)
+
     def receive: Receive = {
       case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ SimpleSubscriber.receive(uuid, akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString, logger)
+      case m: ZMQMessage ⇒ subscriptionReceiver.receive(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString)
       case _             ⇒ //...
     }
   }))
-  println(s"using ports $controller, $subscriber")
-  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, Listener(ctrlListener), Connect(controller))
   private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, Listener(subListener), Connect(subscriber), SubscribeAll)
-  
-  val controllerSender = new SimpleController(ctrlSocket)
   
   def receive = {
     case "set_initial" => { Thread.sleep(1000); controllerSender.set_initial }
