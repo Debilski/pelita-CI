@@ -156,7 +156,8 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
   val controllerSender = new SimpleController(ctrlSocket)
   
   def receive = {
-    case "play" => { Thread.sleep(1000); controllerSender.play }
+    case "set_initial" => { Thread.sleep(1000); controllerSender.set_initial }
+    case "play" => { Thread.sleep(5000); controllerSender.play }
     case "exit" => { controllerSender.exit }
   }
 }
