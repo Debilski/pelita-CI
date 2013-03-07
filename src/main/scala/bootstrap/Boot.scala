@@ -8,7 +8,7 @@ import net.liftweb.sitemap.{Menu, SiteMap}
  * to modify lift's environment
  */
 class Boot {
-  def boot {
+  def boot() {
     // where to search snippet
     LiftRules.addToPackages("de.debilski.pelita.pelitaci.frontend")
 
