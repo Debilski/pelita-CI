@@ -7,7 +7,7 @@ import net.liftweb.util.Helpers._
 import net.liftweb.http.LiftRules
 import net.liftweb.json.JsonAST._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import concurrent.{Promise, Future}
 
 import akka.pattern.ask
 
@@ -33,9 +33,25 @@ object Rest extends RestHelper {
       val JString(factory) = json \ "factory"
       (uri, factory)
     } flatMap {
-      case (uri, factory) => lib.CI.db.addTeam(uri, factory)
+      case (uri, factory) => {
+        import de.debilski.pelita.pelitaci.backend.PelitaInterface._
+        val runner = new Runner { type GameType = ShortGame; val game = new ShortGame{} }
+        val team = de.debilski.pelita.pelitaci.backend.Team(uri, factory)
+
+        val res = runner.checkTeamName(team).unsafePerformIO() match {
+          case Some(teamName) => Future successful teamName
+          case None => Future failed (new Throwable)
+        }
+        res map (teamName => (uri, factory, teamName))
+      }
+    } flatMap {
+      case (uri, factory, teamName) => {
+        lib.CI.db.addTeam(uri, factory).map(id => (id, teamName))
+      }
     } map {
-      id => JField("id", JInt(id))
+      case (id, teamName) =>
+        import net.liftweb.json.JsonDSL._
+        ("id" -> id) ~ ("name" -> teamName)
     }
   }
 
@@ -81,7 +97,7 @@ object Rest extends RestHelper {
   }
 
   serve("rest" :: Nil prefix {
-    case "team" :: "add" :: Nil JsonPost json -> _ => asyncFuture(25)(addTeam(json))
+    case "team" :: "add" :: Nil JsonPost json -> _ => asyncFuture(60)(addTeam(json))
     case "team" :: AsInt(teamId) :: Nil JsonGet _ => asyncFuture(25)(getTeam(teamId))
     case "match" :: "schedule" :: Nil JsonPost json -> _ => asyncFuture(25)(scheduleMatch(json))
   })
