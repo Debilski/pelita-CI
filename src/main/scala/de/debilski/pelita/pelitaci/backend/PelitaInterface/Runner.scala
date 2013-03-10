@@ -7,6 +7,7 @@ trait Game {
   def path: java.io.File
   def exe: String
   def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None): scala.sys.process.ProcessBuilder
+  def checkName(team: String): scala.sys.process.ProcessBuilder
 }
 
 trait PelitaGame extends Game {
@@ -22,11 +23,16 @@ trait PelitaGame extends Game {
   def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = {
     scala.sys.process.Process(cmd(team1, team2, controller, subscriber), cwd=path)
   }
+
+  def checkName(team: String) = {
+    scala.sys.process.Process(exe :: team :: "--check-team" :: Nil, cwd=path)
+  }
 }
 
 trait DummyGame extends PelitaGame {
   override def exe = "echo"
   override def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = super.run(team1, team2, controller, subscriber) #&& ("echo" :: "1" :: Nil)
+  override def checkName(team: String) = super.checkName(team) #&& ("echo" :: "DummyGame" :: Nil)
 }
 
 trait ShortGame extends PelitaGame {
@@ -47,6 +53,7 @@ abstract class Runner {
     val depth = 2
   
     val cmd = "git" :: "clone" ::
+              "--verbose" ::
               "--branch" :: commit ::
               "--depth" :: depth.toString ::
               "--recurse-submodules" ::
@@ -85,34 +92,44 @@ abstract class Runner {
     
   }
 
-  case class PreparedGame(pairing: Pairing, teamSpecs: (String, String))
+  case class PreparedTeam(team: Team, teamSpec: String)
+  case class PreparedGame(pairing: Pairing, teamSpecs: (String, String)) {
+    def teams = (PreparedTeam(pairing.team1, teamSpecs._1), PreparedTeam(pairing.team2, teamSpecs._2))
+  }
 
-  def withPreparedGame[T](pairing: Pairing)(f: PreparedGame => IO[Option[T]]): IO[Option[T]] = {
-    val Pairing(team1: Team, team2: Team) = pairing
-
+  def withPreparedTeam[T](team: Team)(f: PreparedTeam => IO[Option[T]]): IO[Option[T]] = {
     withTemporaryDirectory("pelita-CI-") { tempDir => IO {
 
       import java.nio.file.Files
 
-      val team1Path = tempDir.resolve("t1")
-      val team2Path = tempDir.resolve("t2")
+      val teamPath = tempDir.resolve("t")
 
-      Files.createDirectory(team1Path)
-      Files.createDirectory(team2Path)
+      Files.createDirectory(teamPath)
 
       val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
 
-      if (!team1.uri.isEmpty)
-        cloneRepo(team1.uri, team1Path.toFile).!! //(logger)
-      if (!team2.uri.isEmpty)
-        cloneRepo(team2.uri, team2Path.toFile).!! //(logger)
+      if (!team.uri.isEmpty)
+        cloneRepo(team.uri, teamPath.toFile).!! (logger)
 
-      val team1Spec = if (!team1.uri.isEmpty) team1Path.resolve(team1.factory).toFile.toString else team1.factory
-      val team2Spec = if (!team2.uri.isEmpty) team2Path.resolve(team2.factory).toFile.toString else team2.factory
+      val teamSpec = if (!team.uri.isEmpty)
+        teamPath.resolve(team.factory).toFile.toString
+      else
+        team.factory
 
-      (team1Spec, team2Spec)
-    } flatMap (teamSpecs => f(PreparedGame(pairing, teamSpecs)))
-  }}
+      teamSpec
+    } flatMap (teamSpec => f(PreparedTeam(team, teamSpec)))
+    }}
+
+  def withPreparedGame[T](pairing: Pairing)(f: PreparedGame => IO[Option[T]]): IO[Option[T]] = {
+    val Pairing(team1: Team, team2: Team) = pairing
+
+    withPreparedTeam(team1) { preparedTeam1 =>
+      withPreparedTeam(team2) { preparedTeam2 =>
+        val preparedGame = PreparedGame(Pairing(preparedTeam1.team, preparedTeam2.team), (preparedTeam1.teamSpec, preparedTeam2.teamSpec))
+        f(preparedGame)
+      }
+    }
+  }
 
   def playPreparedGame(controller: Option[String]=None, subscriber: Option[String]=None): PreparedGame => IO[Option[MatchResult]] = preparedGame => IO {
     val lines = game.run(preparedGame.teamSpecs._1, preparedGame.teamSpecs._2, controller, subscriber).lines
@@ -130,4 +147,15 @@ abstract class Runner {
 
   def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[Option[MatchResult]] =
     withPreparedGame(pairing)(playPreparedGame(controller, subscriber))
+
+  def checkPreparedTeamName(): PreparedTeam => IO[Option[String]] = preparedTeam => IO {
+    val lines = game.checkName(preparedTeam.teamSpec).lines
+
+    lines foreach println
+
+    lines.lastOption
+  }
+
+  def checkTeamName(team: Team): IO[Option[String]] =
+    withPreparedTeam(team)(checkPreparedTeamName())
 }
