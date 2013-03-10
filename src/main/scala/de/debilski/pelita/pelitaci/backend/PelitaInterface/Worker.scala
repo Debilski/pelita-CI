@@ -147,7 +147,12 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
 
 class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
   override def preStart() = log.info(s"ZMQPelitaController using ports $controller, $subscriber.")
-  override def postStop() = log.info(s"Stopped controller for $controller/$subscriber.")
+
+  override def postStop() = {
+    context.system.stop(ctrlSocket)
+    context.system.stop(subSocket)
+    log.info(s"Stopped controller for $controller/$subscriber.")
+  }
 
   import akka.zeromq._
 
@@ -166,8 +171,8 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
   private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, Listener(subListener), Connect(subscriber), SubscribeAll)
   
   def receive = {
-    case "set_initial" => { Thread.sleep(1000); controllerSender.set_initial }
-    case "play" => { Thread.sleep(5000); controllerSender.play }
+    case "set_initial" => { controllerSender.set_initial }
+    case "play" => { controllerSender.play }
     case "exit" => { controllerSender.exit }
   }
 }
@@ -191,15 +196,23 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
     Future {
       msg match {
         case (QueuedMatch(uuid, a, b, qT, rT), logger: MessageBus) =>
-          val c = context.actorOf(Props(new ZMQPelitaController(uuid getOrElse java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"),
+          val matchUuid = uuid getOrElse java.util.UUID.fromString("00000000-0000-0000-0000-000000000000")
+          val c = context.actorOf(Props(new ZMQPelitaController(matchUuid,
                                                                 controller, subscriber, logger)))
           try {
             val resultIO = TestRunner.withPreparedGame(Pairing(a, b)) { preparedGame =>
-              c ! "set_initial"
-              c ! "play"
-              c ! "exit"
+              val (team1, team2) = preparedGame.teams
 
-              TestRunner.playPreparedGame(controller=Some(controller), subscriber=Some(subscriber))(preparedGame)
+              for {
+                name1 <- TestRunner.checkPreparedTeamName()(team1)
+                name2 <- TestRunner.checkPreparedTeamName()(team2)
+                _ <- scalaz.effect.IO {
+                  c ! "set_initial"
+                  c ! "play"
+                  c ! "exit"
+                }
+                game <- TestRunner.playPreparedGame(controller=Some(controller), subscriber=Some(subscriber))(preparedGame)
+              } yield game
             }
 
             val result = resultIO.unsafePerformIO
@@ -209,7 +222,7 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
             // ensure that we kill the controller again
             context.system.stop(c)
             // also, sleep for, say 10 seconds, to ensure the zmq socket is really closed
-            Thread.sleep(10000)
+            // Thread.sleep(10000)
           }
           WorkComplete("done")
         case msg =>
