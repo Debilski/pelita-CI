@@ -3,6 +3,7 @@ package lib
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.liftweb.http.CometActor
+import de.debilski.pelita.pelitaci.backend.{Controller, DefaultWorkerFactory}
 
 class BridgeActor(cometActor: CometActor) extends akka.actor.Actor with akka.actor.ActorLogging {
   override def preStart() = log.info(s"Created BridgeActor for $cometActor")
@@ -26,7 +27,17 @@ object CI {
   def createBridgeActor(actor: CometActor) = actorSystem.actorOf(akka.actor.Props(new BridgeActor(actor)), name=s"bridge-actor-${actor.##}")
 
   val actorSystem = akka.actor.ActorSystem("Pelita-CI")
-  val controller = actorSystem.actorOf(akka.actor.Props[de.debilski.pelita.pelitaci.backend.Controller])
+  val controller = actorSystem.actorOf(akka.actor.Props[Controller])
+
+
+  def basePort = 51100
+  def numWorkers = 2
+
+  val workerFactory = new DefaultWorkerFactory(actorSystem, controller.path.child("gamebalancer"))
+  val workers = (0 until numWorkers).map { i ⇒
+    workerFactory.worker(s"tcp://127.0.0.1:${basePort + 2 * i}", s"tcp://127.0.0.1:${basePort + 2 * i + 1}")
+  }
+
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()
 }

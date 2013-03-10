@@ -22,6 +22,14 @@ class CIControllerSpec extends TestKit(ActorSystem("CIControllerSpec"))
   "Controller" should {
     "run with workers" in {
       val master = system.actorOf(Props[Controller], name="controller1")
+
+      def basePort = 51100
+      def numWorkers = 2
+
+      val workerFactory = new DefaultWorkerFactory(system, master.path.child("gamebalancer"))
+      val workers = (0 until numWorkers).map { i ⇒
+        workerFactory.worker(s"tcp://127.0.0.1:${basePort + 2 * i}", s"tcp://127.0.0.1:${basePort + 2 * i + 1}")
+      }
       
       val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
       val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
@@ -30,8 +38,10 @@ class CIControllerSpec extends TestKit(ActorSystem("CIControllerSpec"))
       master ! PlayGame(team1, team2)
       master ! PlayGame(team1, team2)
 
-      val res = Some(MatchResult(Pairing(team1, team2), MatchDraw))
-      expectMsgAllOf(20.seconds, res, res, res)
+      // We expect 3 QueuedMatch and 3 Some(MatchResult) messages
+      val msgs = receiveN(6, 30.seconds)
+      (msgs filter (_.isInstanceOf[QueuedMatch])).length must be(3)
+      (msgs filter { case Some(MatchResult(pairing, winner)) => true; case _ => false }).length must be(3)
     }
   }
 }
