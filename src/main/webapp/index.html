@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<body class="lift:content_id=main">
-  <div id="main" class="lift:surround?with=default;at=content">
+<body data-lift-content-id="main">
+  <div id="main" data-lift="surround?with=default;at=content">
     <header class="page-header">
       <h1>Pelita continuous integration service<small> alpha</small></h1>
     </header>
@@ -8,13 +8,13 @@
 
       <section id="teams" class="span4">
         <header><h2>Teams</h2></header>
-        <div class="lift:comet?type=Teams;name=AllTeamsComet">
+        <div data-lift="comet?type=Teams;name=AllTeamsComet">
           <tms:teams>Loading teams…</tms:teams>
         </div>
       </section>
       <section id="matches" class="span8">
         <header><h2>Matches</h2></header>
-        <div class="lift:comet?type=Matches;name=AllMatchesComet">
+        <div data-lift="comet?type=Matches;name=AllMatchesComet">
           <div id="allmatches">
             <article class="match">
               <header>
