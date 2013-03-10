@@ -16,14 +16,21 @@
         <header><h2>Matches</h2></header>
         <div class="lift:comet?type=Matches;name=AllMatchesComet">
           <div id="allmatches">
-            <article class="match"><div>
+            <article class="match">
               <header>
                 <h3><i class="match-state"></i><span class="teamA">Team A</span> <span>:</span> <span class="teamB">Team B</span></h3>
                 <h4><span class="scoreA">Score A</span> <span>:</span> <span class="scoreB">Score B</span></h4>
-              </header></div>
+              </header>
+              <canvas class="live-canvas"></canvas>
             </article>
           </div>
         </div>
+        <script id="processing-js" src="/js/pelita-canvas.js"></script>
+        <script type="text/javascript">
+          $(document).ready( function(){
+            $("#allmatches canvas").each(function() {createMaze($(this));})
+          });
+        </script>
       </section>
     </div>
   </div>

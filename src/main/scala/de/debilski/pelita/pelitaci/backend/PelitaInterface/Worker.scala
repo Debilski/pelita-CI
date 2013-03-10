@@ -56,7 +56,8 @@ case class PelitaMatchMinimal(
 case class PelitaMaze(
     width: net.liftweb.json.JInt,
     height: net.liftweb.json.JInt,
-    walls: net.liftweb.json.JArray)
+    walls: net.liftweb.json.JArray,
+    bot_positions: net.liftweb.json.JArray)
 
 class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberInterface {
 
@@ -71,6 +72,9 @@ class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberI
   def observe(data: JObject) = {
     val minimalMatch = extractMinimal(data)
     logger publishGlobal (uuid, minimalMatch)
+
+    val maze = extractMaze(data)
+    maze foreach (mz => logger publishGlobal (uuid, mz))
   }
   def exit() = {}
 
@@ -78,8 +82,11 @@ class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberI
     val width = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "width"
     val height = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "height"
     val maze = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "data"
-    (width, height, maze) match {
-      case (w: JInt, h: JInt, m: JArray) => Some(PelitaMaze(width=w, height=h, walls=m))
+    val JArray(bots) = data \ "universe" \ "__value__" \ "bots"
+    val bot_positions = JArray(bots.map(_ \ "__value__" \ "current_pos"))
+
+    (width, height, maze, bot_positions) match {
+      case (w: JInt, h: JInt, m: JArray, b: JArray) => Some(PelitaMaze(width=w, height=h, walls=m, bot_positions = b))
       case _ => None
     }
   }

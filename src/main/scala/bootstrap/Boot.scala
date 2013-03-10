@@ -1,6 +1,6 @@
 package bootstrap.liftweb
 
-import net.liftweb.http.{Html5Properties, LiftRules, Req}
+import net.liftweb.http.{ResourceServer, Html5Properties, LiftRules, Req}
 import net.liftweb.sitemap.{Menu, SiteMap}
 
 /**
@@ -20,6 +20,10 @@ class Boot {
     // Use HTML5 for rendering
     LiftRules.htmlProperties.default.set((r: Req) =>
       new Html5Properties(r.userAgent))
+
+    ResourceServer.allow {
+      case "vendor" :: tail => true
+    }
 
     // Init the Framework
     import de.debilski.pelita.pelitaci.frontend.lib.CI
