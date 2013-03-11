@@ -71,6 +71,7 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
         tables.Teams.forInsert returning tables.Teams.id insert (uri, factory, name)
       } catch {
         case e: org.h2.jdbc.JdbcSQLException =>
+          name.foreach(newName => (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.name).update(newName))
           (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
       }
     (Promise successful id).future
