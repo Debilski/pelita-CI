@@ -4,7 +4,7 @@ import scala.slick.driver.H2Driver.simple._
 import Database.threadLocalSession
 import java.util.UUID
 
-case class Team(id: Option[Int], uri: String, factory: String)
+case class Team(id: Option[Int], uri: String, factory: String, name: Option[String])
 case class Match(uuid: Option[UUID], teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp])
 
 class Tables { 
@@ -12,14 +12,15 @@ class Tables {
     def id = column[Int]("TEAM_ID", O.PrimaryKey, O.AutoInc)
     def uri = column[String]("TEAM_URI")
     def factory = column[String]("TEAM_FACTORY")
-    def * = id.? ~ uri ~ factory <> (Team, Team.unapply _)
+    def name = column[String]("TEAM_NAME", O.Nullable)
+    def * = id.? ~ uri ~ factory ~ name.? <> (Team, Team.unapply _)
   
-    def forInsert = uri ~ factory
+    def forInsert = uri ~ factory ~ name.?
     def idx = index("idx_a", (uri, factory), unique = true)
   }
   
   object Matches extends Table[Match]("MATCHES") {
-    def uuid = column[UUID]("MATCH_ID", O.PrimaryKey, O.AutoInc)
+    def uuid = column[UUID]("MATCH_ID", O.PrimaryKey)
     def teamA_id = column[Int]("TEAMA_ID")
     def teamB_id = column[Int]("TEAMB_ID")
     def result = column[Int]("RESULT")
@@ -39,7 +40,7 @@ import akka.event.Logging
 
 trait DBController {
   def createDB(): Unit
-  def addTeam(uri: String, factory: String): Future[Int]
+  def addTeam(uri: String, factory: String, name: Option[String]): Future[Int]
   def getTeam(id: Int): Future[Team]
   def getTeams: Future[Seq[Team]]
 }
@@ -60,14 +61,14 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
       try {
         (tables.Teams.ddl ++ tables.Matches.ddl).create
       } catch {
-        case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL.")
+        case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL. ($e)")
       }
     }
   }
   
-  def addTeam(uri: String, factory: String): Future[Int] =  db withSession {
+  def addTeam(uri: String, factory: String, name: Option[String]): Future[Int] =  db withSession {
     val id: Int = try {
-        tables.Teams.forInsert returning tables.Teams.id insert (uri, factory)
+        tables.Teams.forInsert returning tables.Teams.id insert (uri, factory, name)
       } catch {
         case e: org.h2.jdbc.JdbcSQLException =>
           (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first

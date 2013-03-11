@@ -20,7 +20,7 @@ object Rest extends RestHelper {
     def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
 
     import net.liftweb.json.JsonDSL._
-    def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory)
+    def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory) ~ ("name" -> t.name)
   }
 
   def init() : Unit = {
@@ -46,17 +46,28 @@ object Rest extends RestHelper {
       }
     } flatMap {
       case (uri, factory, teamName) => {
-        lib.CI.db.addTeam(uri, factory).map(id => (id, teamName))
+        lib.CI.db.addTeam(uri, factory, Some(teamName)).map{ id =>
+          de.debilski.pelita.pelitaci.backend.database.Team(Some(id), uri, factory, Some(teamName))
+        }
       }
     } map {
-      case (id, teamName) =>
-        import net.liftweb.json.JsonDSL._
-        ("id" -> id) ~ ("name" -> teamName)
+      case team: de.debilski.pelita.pelitaci.backend.database.Team =>
+        team.toJson
     }
   }
 
   def getTeam(teamId: Int): Future[JValue] = {
-    for { team <- lib.CI.db.getTeam(teamId) } yield team.toJson
+    val force = S.param("force").map(_ == "true").getOrElse(false)
+    if (force) {
+      for {
+        team <- lib.CI.db.getTeam(teamId)
+        teamJson <- addTeam(team.toJson)
+      } yield teamJson
+    } else {
+      for {
+        team <- lib.CI.db.getTeam(teamId)
+      } yield team.toJson
+    }
   }
 
   def scheduleMatch(json: net.liftweb.json.JsonAST.JValue): Future[JValue] = {
