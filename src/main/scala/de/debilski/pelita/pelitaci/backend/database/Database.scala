@@ -42,7 +42,7 @@ trait DBController {
   def createDB(): Unit
   def addTeam(uri: String, factory: String, name: Option[String]): Future[Int]
   def getTeam(id: Int): Future[Team]
-  def getTeams: Future[Seq[Team]]
+  def getTeams(): Future[Seq[Team]]
 }
 
 class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRestart {
@@ -80,7 +80,7 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
     (Promise() complete scala.util.Try(tables.Teams.filter(_.id === id).map(_.*).first)).future
   }
   
-  def getTeams: Future[Seq[Team]] = db withSession {
+  def getTeams(): Future[Seq[Team]] = db withSession {
     (Promise() complete scala.util.Try((for (t <- tables.Teams) yield t).list.toSeq)).future
   }
 }

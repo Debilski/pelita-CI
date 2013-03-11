@@ -19,7 +19,7 @@ object CI {
   case class TeamsList(teams: Seq[de.debilski.pelita.pelitaci.backend.Team])
 
   def requestTeams(actor: CometActor) = {
-    db.getTeams map { teams =>
+    db.getTeams() map { teams =>
       actor send TeamsList(teams.map(team => de.debilski.pelita.pelitaci.backend.Team(team.uri, team.factory)))
     }
   }
