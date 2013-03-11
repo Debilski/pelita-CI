@@ -17,7 +17,7 @@ import net.liftweb.util.Schedule
 
 object Rest extends RestHelper {
   implicit class Team2Json(t: de.debilski.pelita.pelitaci.backend.database.Team) {
-    def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory)
+    def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory, t.name)
 
     import net.liftweb.json.JsonDSL._
     def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory) ~ ("name" -> t.name)
@@ -36,7 +36,7 @@ object Rest extends RestHelper {
       case (uri, factory) => {
         import de.debilski.pelita.pelitaci.backend.PelitaInterface._
         val runner = new Runner { type GameType = ShortGame; val game = new ShortGame{} }
-        val team = de.debilski.pelita.pelitaci.backend.Team(uri, factory)
+        val team = de.debilski.pelita.pelitaci.backend.Team(uri, factory, None)
 
         val res = runner.checkTeamName(team).unsafePerformIO() match {
           case Some(teamName) => Future successful teamName
