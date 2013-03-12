@@ -44,10 +44,10 @@ abstract class Runner {
   type GameType <: Game
   val game: GameType
   
-  def cloneRepo(uri: String, cwd: java.io.File): scala.sys.process.ProcessBuilder = {
+  def cloneRepo(url: String, cwd: java.io.File): scala.sys.process.ProcessBuilder = {
     import scala.sys.process.Process
 
-    val repo = new java.net.URI(uri)
+    val repo = new java.net.URI(url)
 
     val commit = Option(repo.getFragment) getOrElse "master"
     val repository = new java.net.URI(repo.getScheme, repo.getSchemeSpecificPart, null).toString // null???
@@ -109,10 +109,10 @@ abstract class Runner {
 
       val logger = scala.sys.process.ProcessLogger((o: String) => println("out " + o), (e: String) => println("err " + e))
 
-      if (!team.uri.isEmpty)
-        cloneRepo(team.uri, teamPath.toFile).!! (logger)
+      if (!team.url.isEmpty)
+        cloneRepo(team.url, teamPath.toFile).!! (logger)
 
-      val teamSpec = if (!team.uri.isEmpty)
+      val teamSpec = if (!team.url.isEmpty)
         teamPath.resolve(team.factory).toFile.toString
       else
         team.factory

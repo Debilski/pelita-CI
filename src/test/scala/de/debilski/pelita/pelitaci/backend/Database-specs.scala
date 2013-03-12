@@ -18,17 +18,17 @@ class DatabaseSpecs extends Specification{
   
   import database.DBController
   
-  val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
-  val team1B = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
-  val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory2")
+  val team1 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team1B = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team2 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory2")
 
   "Database" should {
     "add teams" in {
       val myActor = DBController.createActor(system)("jdbc:h2:mem:test1;DB_CLOSE_DELAY=-1")
       myActor.createDB()
       
-      myActor addTeam (team1.uri.toString, team1.factory)
-      myActor addTeam (team2.uri.toString, team2.factory)
+      myActor addTeam (team1.url.toString, team1.factory)
+      myActor addTeam (team2.url.toString, team2.factory)
       
       val fut = myActor.getTeams.map(_.length)
       
@@ -39,9 +39,9 @@ class DatabaseSpecs extends Specification{
       val myActor = DBController.createActor(system)("jdbc:h2:mem:test2;DB_CLOSE_DELAY=-1")
       myActor.createDB()
       
-      myActor addTeam (team1.uri.toString, team1.factory)
-      myActor addTeam (team2.uri.toString, team2.factory)
-      myActor addTeam (team1B.uri.toString, team1B.factory)
+      myActor addTeam (team1.url.toString, team1.factory)
+      myActor addTeam (team2.url.toString, team2.factory)
+      myActor addTeam (team1B.url.toString, team1B.factory)
       
       val fut = myActor.getTeams.map(_.length)
       
@@ -52,10 +52,10 @@ class DatabaseSpecs extends Specification{
       val myActor = DBController.createActor(system)("jdbc:h2:mem:test3;DB_CLOSE_DELAY=-1")
       myActor.createDB()
 
-      val id1A_F: Future[Int] = myActor addTeam (team1.uri.toString, team1.factory)
-      val id2A_F: Future[Int] = myActor addTeam (team2.uri.toString, team2.factory)
-      val id1B_F: Future[Int] = myActor addTeam (team1B.uri.toString, team1B.factory)
-      val id2B_F: Future[Int] = myActor addTeam (team2.uri.toString, team2.factory)
+      val id1A_F: Future[Int] = myActor addTeam (team1.url.toString, team1.factory)
+      val id2A_F: Future[Int] = myActor addTeam (team2.url.toString, team2.factory)
+      val id1B_F: Future[Int] = myActor addTeam (team1B.url.toString, team1B.factory)
+      val id2B_F: Future[Int] = myActor addTeam (team2.url.toString, team2.factory)
 
       val success = for {
         id1A <- id1A_F

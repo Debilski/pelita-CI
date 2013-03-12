@@ -10,8 +10,8 @@ class RunnerSpecs extends Specification{
     val game = new DummyGame{}
   }
   
-  val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
-  val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team1 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+  val team2 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
 
   "Pelita CI" should {
     "play a game" in {

@@ -17,10 +17,10 @@ import net.liftweb.util.Schedule
 
 object Rest extends RestHelper {
   implicit class Team2Json(t: de.debilski.pelita.pelitaci.backend.database.Team) {
-    def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.uri, t.factory, t.name)
+    def toTeam = de.debilski.pelita.pelitaci.backend.Team(t.url, t.factory, t.name)
 
     import net.liftweb.json.JsonDSL._
-    def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("uri" -> t.uri) ~ ("factory" -> t.factory) ~ ("name" -> t.name)
+    def toJson: net.liftweb.json.JValue = ("id" -> t.id) ~ ("url" -> t.url) ~ ("factory" -> t.factory) ~ ("name" -> t.name)
   }
 
   def init() : Unit = {
@@ -29,25 +29,25 @@ object Rest extends RestHelper {
 
   def addTeam(json: net.liftweb.json.JsonAST.JValue): Future[JValue] = {
     Future {
-      val JString(uri) = json \ "uri"
+      val JString(url) = json \ "url"
       val JString(factory) = json \ "factory"
-      (uri, factory)
+      (url, factory)
     } flatMap {
-      case (uri, factory) => {
+      case (url, factory) => {
         import de.debilski.pelita.pelitaci.backend.PelitaInterface._
         val runner = new Runner { type GameType = ShortGame; val game = new ShortGame{} }
-        val team = de.debilski.pelita.pelitaci.backend.Team(uri, factory, None)
+        val team = de.debilski.pelita.pelitaci.backend.Team(url, factory, None)
 
         val res = runner.checkTeamName(team).unsafePerformIO() match {
           case Some(teamName) => Future successful teamName
           case None => Future failed (new Throwable)
         }
-        res map (teamName => (uri, factory, teamName))
+        res map (teamName => (url, factory, teamName))
       }
     } flatMap {
-      case (uri, factory, teamName) => {
-        lib.CI.db.addTeam(uri, factory, Some(teamName)).map{ id =>
-          de.debilski.pelita.pelitaci.backend.database.Team(Some(id), uri, factory, Some(teamName))
+      case (url, factory, teamName) => {
+        lib.CI.db.addTeam(url, factory, Some(teamName)).map{ id =>
+          de.debilski.pelita.pelitaci.backend.database.Team(Some(id), url, factory, Some(teamName))
         }
       }
     } map {

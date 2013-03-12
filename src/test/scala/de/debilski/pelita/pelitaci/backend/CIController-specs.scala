@@ -31,8 +31,8 @@ class CIControllerSpec extends TestKit(ActorSystem("CIControllerSpec"))
         workerFactory.worker(s"tcp://127.0.0.1:${basePort + 2 * i}", s"tcp://127.0.0.1:${basePort + 2 * i + 1}")
       }
       
-      val team1 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
-      val team2 = Team(uri="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+      val team1 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
+      val team2 = Team(url="/Volumes/Data/Projects/Python-School/players#master", "rike:factory")
       
       master ! PlayGame(team1, team2)
       master ! PlayGame(team1, team2)

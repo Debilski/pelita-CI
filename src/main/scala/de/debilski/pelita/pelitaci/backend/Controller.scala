@@ -4,7 +4,7 @@ import akka.actor._
 import java.util.UUID
 
 sealed trait ControllerMessage
-case class AddTeam(uri: String, fragment: String) extends ControllerMessage
+case class AddTeam(url: String, fragment: String) extends ControllerMessage
 case class PlayGame(team1: Team, team2: Team) extends ControllerMessage
 case class PlayMatch(queuedMatch: QueuedMatch) extends ControllerMessage
 case class QueuedMatch(uuid: Option[UUID], teamA: Team, teamB: Team, queueTime: Option[java.util.Date], resultTime: Option[java.util.Date])

@@ -20,7 +20,7 @@ object CI {
 
   def requestTeams(actor: CometActor) = {
     db.getTeams() map { teams =>
-      actor send TeamsList(teams.map(team => de.debilski.pelita.pelitaci.backend.Team(team.uri, team.factory, team.name)))
+      actor send TeamsList(teams.map(team => de.debilski.pelita.pelitaci.backend.Team(team.url, team.factory, team.name)))
     }
   }
 

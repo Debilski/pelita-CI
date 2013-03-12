@@ -4,19 +4,19 @@ import scala.slick.driver.H2Driver.simple._
 import Database.threadLocalSession
 import java.util.UUID
 
-case class Team(id: Option[Int], uri: String, factory: String, name: Option[String])
+case class Team(id: Option[Int], url: String, factory: String, name: Option[String])
 case class Match(uuid: Option[UUID], teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp])
 
 class Tables { 
   object Teams extends Table[Team]("TEAMS") {
     def id = column[Int]("TEAM_ID", O.PrimaryKey, O.AutoInc)
-    def uri = column[String]("TEAM_URI")
+    def url = column[String]("TEAM_URL")
     def factory = column[String]("TEAM_FACTORY")
     def name = column[String]("TEAM_NAME", O.Nullable)
-    def * = id.? ~ uri ~ factory ~ name.? <> (Team, Team.unapply _)
+    def * = id.? ~ url ~ factory ~ name.? <> (Team, Team.unapply _)
   
-    def forInsert = uri ~ factory ~ name.?
-    def idx = index("idx_a", (uri, factory), unique = true)
+    def forInsert = url ~ factory ~ name.?
+    def idx = index("idx_a", (url, factory), unique = true)
   }
   
   object Matches extends Table[Match]("MATCHES") {
@@ -40,7 +40,8 @@ import akka.event.Logging
 
 trait DBController {
   def createDB(): Unit
-  def addTeam(uri: String, factory: String, name: Option[String]): Future[Int]
+
+  def addTeam(url: String, factory: String, name: Option[String]): Future[Int]
   def getTeam(id: Int): Future[Team]
   def getTeams(): Future[Seq[Team]]
 }
@@ -66,13 +67,13 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
     }
   }
   
-  def addTeam(uri: String, factory: String, name: Option[String]): Future[Int] =  db withSession {
+  def addTeam(url: String, factory: String, name: Option[String]): Future[Int] =  db withSession {
     val id: Int = try {
-        tables.Teams.forInsert returning tables.Teams.id insert (uri, factory, name)
+        tables.Teams.forInsert returning tables.Teams.id insert (url, factory, name)
       } catch {
         case e: org.h2.jdbc.JdbcSQLException =>
-          name.foreach(newName => (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.name).update(newName))
-          (for { team <- tables.Teams if team.uri === uri && team.factory === factory} yield team.id).first
+          name.foreach(newName => (for { team <- tables.Teams if team.url === url && team.factory === factory} yield team.name).update(newName))
+          (for { team <- tables.Teams if team.url === url && team.factory === factory} yield team.id).first
       }
     (Promise successful id).future
   }

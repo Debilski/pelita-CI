@@ -1,8 +1,8 @@
 package de.debilski.pelita.pelitaci
 
 package backend {
-  case class Team(uri: String, factory: String, name: Option[String]) {
-    def this(uri: String, factory: String) = this(uri, factory, None)
+  case class Team(url: String, factory: String, name: Option[String]) {
+    def this(url: String, factory: String) = this(url, factory, None)
   }
   case class TeamPath(team: Team, path: java.io.File)
   case class Pairing(team1: Team, team2: Team)
