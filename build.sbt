@@ -61,6 +61,8 @@ libraryDependencies ++= List(
   "com.h2database" % "h2" % "1.3.166"
 )
 
+libraryDependencies += "com.typesafe" % "config" % "1.0.0"
+
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.9" % "runtime"
 
 libraryDependencies += "org.codehaus.janino" % "janino" % "2.6.1"

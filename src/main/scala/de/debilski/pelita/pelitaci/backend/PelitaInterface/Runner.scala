@@ -2,6 +2,7 @@ package de.debilski.pelita.pelitaci.backend
 package PelitaInterface
 
 import scalaz.effect.IO
+import de.debilski.pelita.pelitaci.DefaultSettings
 
 trait Game {
   def path: java.io.File
@@ -11,8 +12,8 @@ trait Game {
 }
 
 trait PelitaGame extends Game {
-  def path = new java.io.File("/Volumes/Data/Projects/pelita")
-  def exe = "./pelitagame"
+  def path = new java.io.File(DefaultSettings.pelitaPath)
+  def exe = DefaultSettings.pelitagame
 
   def cmd(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = {
     val c = controller.map("--controller" :: _ :: "--external-controller" :: Nil).getOrElse(Nil)
