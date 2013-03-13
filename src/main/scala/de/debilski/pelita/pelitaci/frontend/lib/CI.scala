@@ -137,15 +137,23 @@ object CI {
     def receive = {
       case QueuedMatch(Some(uuid), teamA, teamB, _, _) =>
         log.info(s"Queuing match $uuid between $teamA and $teamB")
-        for {
-        teamAId <- db.addTeam(teamA.url, teamA.factory, teamA.name)
-        teamBId <- db.addTeam(teamB.url, teamB.factory, teamB.name)
-      } _queuedMatches(uuid) = (teamAId, teamBId)
+        val updateFuture = for {
+          teamAId <- db.addTeam(teamA.url, teamA.factory, teamA.name)
+          teamBId <- db.addTeam(teamB.url, teamB.factory, teamB.name)
+        } yield {
+          _queuedMatches(uuid) = (teamAId, teamBId)
+        }
+        // TODO: Somehow remove this Await
+        scala.concurrent.Await.ready(updateFuture, scala.concurrent.duration.Duration("3 hours"))
 
       case (uuid: UUID, Some(m @ PelitaMatchMinimal(ta, tb, Some(matchWinner)))) => {
         log.info(s"Received a result in match $uuid: $m")
-        db.storeMatch(uuid, _queuedMatches(uuid)._1, _queuedMatches(uuid)._2, matchWinner.code, None)
-        _updateRanking(_queuedMatches(uuid)._1, _queuedMatches(uuid)._2, matchWinner.code)
+        val storedMatch = _queuedMatches.get(uuid)
+
+        storedMatch foreach { m =>
+          db.storeMatch(uuid, m._1, m._2, matchWinner.code, None)
+          _updateRanking(m._1, m._2, matchWinner.code)
+        }
       }
     }
   }))
