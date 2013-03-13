@@ -34,7 +34,7 @@ trait Ranking { self =>
     
     new Ranking {
       type Team = self.Team
-      val teamScores = self.teamScores.updated(winner, winnerScore).updated(loser, loserScore)
+      val teamScores = self.teamScores.updated(winner, winnerScore max 0).updated(loser, loserScore max 0)
     }
   }
   
@@ -44,8 +44,8 @@ trait Ranking { self =>
     
     new Ranking {
       type Team = self.Team
-      val teamScores = self.teamScores.updated(team1, newScore1).updated(team2, newScore2)
+      val teamScores = self.teamScores.updated(team1, newScore1 max 0).updated(team2, newScore2 max 0)
     }
-  }  
+  }
 }
 

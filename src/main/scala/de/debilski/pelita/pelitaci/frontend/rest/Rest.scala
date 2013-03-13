@@ -13,6 +13,7 @@ import akka.pattern.ask
 
 import de.debilski.pelita.pelitaci.backend.{QueuedMatch, PlayGame, AddTeam}
 import net.liftweb.util.Schedule
+import lib.{AutoModeStop, AutoMode, ScheduleRandom}
 
 
 object Rest extends RestHelper {
@@ -119,5 +120,8 @@ object Rest extends RestHelper {
     case "team" :: Nil JsonGet _ => asyncFuture(25)(getTeams())
     case "team" :: AsInt(teamId) :: Nil JsonGet _ => asyncFuture(25)(getTeam(teamId))
     case "match" :: "schedule" :: Nil JsonPost json -> _ => asyncFuture(25)(scheduleMatch(json))
+    case "match" :: "schedule" :: AsInt(number) :: Nil JsonGet _ => lib.CI.autoScheduler ! ScheduleRandom(number); JNull
+    case "match" :: "autoqueue" :: AsInt(maxQueue) :: AsInt(intervalSecs) :: Nil JsonGet _=> lib.CI.autoScheduler ! AutoMode(maxQueue, intervalSecs); JNull
+    case "match" :: "autoqueue" :: "stop" :: Nil JsonGet _ => lib.CI.autoScheduler ! AutoModeStop; JNull
   })
 }

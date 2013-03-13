@@ -9,6 +9,7 @@ case class PlayGame(team1: Team, team2: Team) extends ControllerMessage
 case class PlayMatch(queuedMatch: QueuedMatch) extends ControllerMessage
 case class QueuedMatch(uuid: Option[UUID], teamA: Team, teamB: Team, queueTime: Option[java.util.Date], resultTime: Option[java.util.Date])
 
+
 class GameBalancer extends utils.workbalancer.Master {
   def receiveWork = {
     case c @ (queuedMatch: QueuedMatch, logger: MessageBus) ⇒ doWork(c)
@@ -31,9 +32,11 @@ class Controller extends Actor with ActorLogging {
       val queuedMatch = QueuedMatch(Option(java.util.UUID.randomUUID), a, b, Option(new java.util.Date), None)
       balancer.!((queuedMatch, eventBus))(sender)
       sender ! queuedMatch
+      eventBus publishGlobal queuedMatch
     }
-    case nwc :utils.workbalancer.InfoMessages.NumWorkersChanged => eventBus.publishGlobal(nwc)
-    case qsc :utils.workbalancer.InfoMessages.QueueSizeChanged => eventBus.publishGlobal(qsc)
+
+    case nwc: utils.workbalancer.InfoMessages.NumWorkersChanged => eventBus.publishGlobal(nwc)
+    case qsc: utils.workbalancer.InfoMessages.QueueSizeChanged => eventBus.publishGlobal(qsc)
     case other ⇒ log.info(s"received unknown message: $other")
   }
 }

@@ -9,6 +9,7 @@ import net.liftweb.common.{Box, Full}
 import net.liftweb.util._
 import net.liftweb.util.Helpers._
 import net.liftweb.http.js.JsCmds.{SetHtml}
+import de.debilski.pelita.pelitaci.backend.Team
 
 class Teams extends CometActor {
   override def defaultPrefix = Full("tms")
@@ -25,6 +26,12 @@ class Teams extends CometActor {
     bind("teams" -> loadingMsg)
   }
 
+  def renderTeam(team: Team, score: Option[Double]) = {
+    val location = if (!team.url.isEmpty) s"${team.factory} at ${team.url}" else team.factory
+    val scoreFormatted = score.map(s => f"$s%.1f pts") getOrElse "–"
+    <li><b class="score">{scoreFormatted}</b> <b class="teamname" title={location}>{team.name getOrElse <i>unknown name</i>}</b></li>
+  }
+
   ping(10000L)
 
   def loadingMsg = <span id="allteamslist">{
@@ -35,7 +42,7 @@ class Teams extends CometActor {
     case Ping => ping(10000L)
     case RequestNew => lib.CI.requestTeams(this)
     case lib.CI.TeamsList(teams) => {
-      _teams = Some(<ul>{ for (t <- teams) yield <li>{t.toString}</li> }</ul>)
+      _teams = Some(<ul>{ for ((team, score) <- teams) yield renderTeam(team, score) }</ul>)
 
       _teams.map(html => partialUpdate(SetHtml("allteamslist", html)))
     }

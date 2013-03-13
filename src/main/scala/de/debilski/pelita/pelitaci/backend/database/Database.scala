@@ -44,6 +44,9 @@ trait DBController {
   def addTeam(url: String, factory: String, name: Option[String]): Future[Int]
   def getTeam(id: Int): Future[Team]
   def getTeams(): Future[Seq[Team]]
+
+  def storeMatch(uuid: UUID, teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp]): Unit
+  def getMatches(): Future[Seq[Match]]
 }
 
 class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRestart {
@@ -84,6 +87,15 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
   
   def getTeams(): Future[Seq[Team]] = db withSession {
     (Promise() complete scala.util.Try((for (t <- tables.Teams) yield t).list.toSeq)).future
+  }
+
+  def storeMatch(uuid: UUID, teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp]): Unit = db withSession {
+    val tstamp = timestamp orElse Option(new java.sql.Timestamp(java.util.Calendar.getInstance.getTime.getTime))
+    tables.Matches insert Match(Some(uuid), teamA, teamB, result, tstamp)
+  }
+
+  def getMatches(): Future[Seq[Match]] = db withSession {
+    (Promise() complete scala.util.Try((for (m <- tables.Matches.sortBy(_.timestamp)) yield m).list.toSeq)).future
   }
 }
 
