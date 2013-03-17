@@ -55,9 +55,14 @@ class Matches extends CometActor {
     isNew
   }
 
-  def render = "#allmatches *" #> renderMatches(_matches) &
-               "#num-workers *" #> lib.CI.numWorkersAgent() &
-               "#queue-size *" #> lib.CI.queueSizeAgent()
+  def render = {
+  //             "#num-workers *" #> lib.CI.numWorkersAgent() &
+  //             "#queue-size *" #> lib.CI.queueSizeAgent() &
+  Schedule.schedule(this, NumWorkersChanged(lib.CI.numWorkersAgent()), 100L)
+  Schedule.schedule(this, QueueSizeChanged(lib.CI.queueSizeAgent()), 100L)
+
+  "#allmatches *" #> renderMatches(_matches)
+  }
 
   def renderMatchHeader(uuid: UUID, aMatch: PelitaMatchMinimal) = {
     ".teamA *" #> aMatch.teamA.name &
