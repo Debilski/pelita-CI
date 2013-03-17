@@ -13,6 +13,7 @@ import PelitaInterface.PelitaMatchMinimal
 import scala.Some
 import de.debilski.pelita.pelitaci.backend.QueuedMatch
 import de.debilski.pelita.pelitaci.backend.SubscribeGlobal
+import de.debilski.pelita.pelitaci.backend.utils.workbalancer.InfoMessages.{QueueSizeChanged, NumWorkersChanged}
 
 class BridgeActor(cometActor: CometActor) extends akka.actor.Actor with akka.actor.ActorLogging {
   override def preStart() = log.info(s"Created BridgeActor for $cometActor")
@@ -123,6 +124,9 @@ object CI {
     workerFactory.worker(s"tcp://127.0.0.1:${basePort + 2 * i}", s"tcp://127.0.0.1:${basePort + 2 * i + 1}")
   }
 
+  val numWorkersAgent = akka.agent.Agent(0)(actorSystem)
+  val queueSizeAgent = akka.agent.Agent(0)(actorSystem)
+
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()
 
@@ -135,6 +139,8 @@ object CI {
     val _queuedMatches = scala.collection.mutable.LinkedHashMap.empty[UUID, (Int, Int)]
 
     def receive = {
+      case NumWorkersChanged(numWorkers) => numWorkersAgent send numWorkers
+      case QueueSizeChanged(queueSize) => queueSizeAgent send queueSize
       case QueuedMatch(Some(uuid), teamA, teamB, _, _) =>
         log.info(s"Queuing match $uuid between $teamA and $teamB")
         val updateFuture = for {

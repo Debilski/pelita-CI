@@ -56,8 +56,8 @@ class Matches extends CometActor {
   }
 
   def render = "#allmatches *" #> renderMatches(_matches) &
-               "#num-workers *" #> _numWorkers &
-               "#queue-size *" #> _queueSize
+               "#num-workers *" #> lib.CI.numWorkersAgent() &
+               "#queue-size *" #> lib.CI.queueSizeAgent()
 
   def renderMatchHeader(uuid: UUID, aMatch: PelitaMatchMinimal) = {
     ".teamA *" #> aMatch.teamA.name &
@@ -96,15 +96,10 @@ class Matches extends CometActor {
   import net.liftweb.http.js.JE
   import net.liftweb.http.js.jquery.JqJsCmds
 
-  var _numWorkers: Option[Int] = None
-  var _queueSize: Option[Int] = None
-
   override def highPriority: PartialFunction[Any, Unit] = {
     case NumWorkersChanged(numWorkers) =>
-      _numWorkers = Some(numWorkers)
       partialUpdate(JE.Call("updateNumWorkers", numWorkers).cmd)
     case QueueSizeChanged(queueSize) =>
-      _queueSize = Some(queueSize)
       partialUpdate(JE.Call("updateQueueSize", queueSize).cmd)
   }
 
