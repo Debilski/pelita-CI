@@ -81,29 +81,50 @@ class AutoScheduler extends akka.actor.Actor with akka.actor.ActorLogging {
 
 
 object CI {
-  case class TeamsList(teams: Seq[(de.debilski.pelita.pelitaci.backend.Team, Option[Double])])
+  case class TeamsList(teams: Seq[(Int, de.debilski.pelita.pelitaci.backend.Team, Option[Double])])
 
   private var _ranking = new Ranking {
     type Team = Int
     val teamScores = Map[Team, Score]() withDefaultValue 800.0
   }
 
-  private def _updateRanking(teamA: Int, teamB: Int, result: Int) = {
+  case class WDL(wins: Int, draws: Int, losses: Int)
+
+  private val _statisticTotal = scala.collection.mutable.LinkedHashMap.empty[Int, WDL] withDefaultValue WDL(0, 0, 0)
+  private val _statisticComplete = scala.collection.mutable.LinkedHashMap.empty[Int, Vector[Int]] withDefaultValue Vector.empty
+
+  private def _updateRanking(teamA: Int, teamB: Int, result: Int) {
     println(s"Updating ranking between teams $teamA and $teamB.")
     result match {
-      case 0 => _ranking = _ranking.addDraw(teamA, teamB)
-      case 1 => _ranking = _ranking.addWinning(teamA, teamB)
-      case 2 => _ranking = _ranking.addWinning(teamB, teamA)
+      case 0 =>
+        _ranking = _ranking.addDraw(teamA, teamB)
+        _statisticTotal(teamA) = _statisticTotal(teamA).copy(draws = _statisticTotal(teamA).draws + 1)
+        _statisticTotal(teamB) = _statisticTotal(teamB).copy(draws = _statisticTotal(teamB).draws + 1)
+        _statisticComplete(teamA) = _statisticComplete(teamA) :+ 0
+        _statisticComplete(teamB) = _statisticComplete(teamB) :+ 0
+      case 1 =>
+        _ranking = _ranking.addWinning(teamA, teamB)
+        _statisticTotal(teamA) = _statisticTotal(teamA).copy(wins = _statisticTotal(teamA).wins + 1)
+        _statisticTotal(teamB) = _statisticTotal(teamB).copy(losses = _statisticTotal(teamB).losses + 1)
+        _statisticComplete(teamA) = _statisticComplete(teamA) :+ 1
+        _statisticComplete(teamB) = _statisticComplete(teamB) :+ -1
+      case 2 =>
+        _ranking = _ranking.addWinning(teamB, teamA)
+        _statisticTotal(teamA) = _statisticTotal(teamA).copy(losses = _statisticTotal(teamA).losses + 1)
+        _statisticTotal(teamB) = _statisticTotal(teamB).copy(wins = _statisticTotal(teamB).wins + 1)
+        _statisticComplete(teamA) = _statisticComplete(teamA) :+ -1
+        _statisticComplete(teamB) = _statisticComplete(teamB) :+ 1
       case _ =>
     }
+    statisticsAgent send (_statisticTotal, _statisticComplete)
   }
 
   def requestTeams(actor: CometActor) = {
     db.getTeams() map { teams =>
-      val teamsScore = teams.map { team =>
+      val teamsScore = teams.flatMap { team =>
         val score = team.id map _ranking.teamScores
-        (de.debilski.pelita.pelitaci.backend.Team(team.url, team.factory, team.name), score)
-      } sortBy (t => t._2.map(-_))
+        team.id map (id => (id, de.debilski.pelita.pelitaci.backend.Team(team.url, team.factory, team.name), score))
+      } sortBy (t => t._3.map(-_))
 
       actor send TeamsList(teamsScore)
     }
@@ -126,6 +147,8 @@ object CI {
 
   val numWorkersAgent = akka.agent.Agent(0)(actorSystem)
   val queueSizeAgent = akka.agent.Agent(0)(actorSystem)
+
+  val statisticsAgent = akka.agent.Agent((_statisticTotal, _statisticComplete))(actorSystem)
 
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()

@@ -26,10 +26,24 @@ class Teams extends CometActor {
     bind("teams" -> loadingMsg)
   }
 
-  def renderTeam(team: Team, score: Option[Double]) = {
+  def renderTeam(id: Int, team: Team, score: Option[Double]) = {
     val location = if (!team.url.isEmpty) s"${team.factory} at ${team.url}" else team.factory
     val scoreFormatted = score.map(s => f"$s%.1f pts") getOrElse "–"
-    <li><b class="score">{scoreFormatted}</b> <b class="teamname" title={location}>{team.name getOrElse <i>unknown name</i>}</b></li>
+    <li><b class="score">{scoreFormatted}</b> <b class="teamname" title={location + " " + statistics(id)}>{team.name getOrElse <i>unknown name</i>}</b></li>
+  }
+
+  def statistics(teamId: Int) = {
+    val (totalStats, completeStats) = lib.CI.statisticsAgent()
+    val last20Stats = (completeStats(teamId) takeRight 20).reverse
+
+    def toSmiley(i: Int) = i match {
+      case -1 => "●"
+      case 0 => "◐"
+      case 1 => "○"
+      case _ => ""
+    }
+
+    totalStats(teamId).toString + last20Stats.map(toSmiley).mkString("[", "", "]")
   }
 
   ping(10000L)
@@ -42,7 +56,7 @@ class Teams extends CometActor {
     case Ping => ping(10000L)
     case RequestNew => lib.CI.requestTeams(this)
     case lib.CI.TeamsList(teams) => {
-      _teams = Some(<ul>{ for ((team, score) <- teams) yield renderTeam(team, score) }</ul>)
+      _teams = Some(<ul>{ for ((id, team, score) <- teams) yield renderTeam(id, team, score) }</ul>)
 
       _teams.map(html => partialUpdate(SetHtml("allteamslist", html)))
     }
