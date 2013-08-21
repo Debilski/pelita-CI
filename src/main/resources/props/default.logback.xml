@@ -6,9 +6,29 @@
     <encoder>
       <pattern>[%level] [%date] [%thread] [%logger{36}] - %msg%n</pattern>
     </encoder>
+
+    <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+      <evaluator> <!-- defaults to type ch.qos.logback.classic.boolex.JaninoEventEvaluator -->
+        <expression>return formattedMessage.contains("comet_request") || formattedMessage.contains("ajax_request");</expression>
+      </evaluator>
+      <OnMismatch>NEUTRAL</OnMismatch>
+      <OnMatch>DENY</OnMatch>
+    </filter>
+
   </appender>
+
+    <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+      <evaluator> <!-- defaults to type ch.qos.logback.classic.boolex.JaninoEventEvaluator -->
+        <expression>return formattedMessage.contains("comet_request") || formattedMessage.contains("ajax_request");</expression>
+      </evaluator>
+      <OnMismatch>NEUTRAL</OnMismatch>
+      <OnMatch>DENY</OnMatch>
+    </filter>
+
+
 
   <root level="info">
     <appender-ref ref="STDOUT" />
   </root>
+
 </configuration>

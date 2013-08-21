@@ -153,17 +153,43 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
 }
 
 class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
+  import akka.zeromq._
+
+  val zmqContext = Context()
+
+  // Ported from akka-testkit
+  import scala.concurrent.duration._
+  private def awaitCond(p: ⇒ Boolean, max: Duration = Duration.Undefined, interval: Duration = 100.millis, message: String = "") {
+    def now: FiniteDuration = System.nanoTime.nanos
+
+    val stop = now + max
+
+    @scala.annotation.tailrec
+    def poll(t: Duration) {
+      if (!p) {
+        assert(now < stop, "timeout " + max + " expired: " + message)
+        Thread.sleep(t.toMillis)
+        poll((stop - now) min interval)
+      }
+    }
+
+    poll(max min interval)
+  }
+
   override def preStart() = log.info(s"ZMQPelitaController using ports $controller, $subscriber.")
 
   override def postStop() = {
-    context.system.stop(ctrlSocket)
-    context.system.stop(subSocket)
+    log.info(s"Trying to stop controller for $controller/$subscriber.")
+    context.system stop ctrlSocket
+    context.system stop subSocket
+    awaitCond(ctrlSocket.isTerminated)
+    awaitCond(subSocket.isTerminated)
+    zmqContext.term
     log.info(s"Stopped controller for $controller/$subscriber.")
+    System.gc()
   }
 
-  import akka.zeromq._
-
-  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, Connect(controller))
+  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, zmqContext, Connect(controller), Linger(0))
   val controllerSender = new SimpleController(ctrlSocket)
 
   val subListener = context.actorOf(Props(new Actor {
@@ -175,7 +201,7 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
       case _             ⇒ //...
     }
   }))
-  private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, Listener(subListener), Connect(subscriber), SubscribeAll)
+  private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, zmqContext, Listener(subListener), Connect(subscriber), SubscribeAll, Linger(0))
   
   def receive = {
     case "set_initial" => { controllerSender.set_initial }
@@ -205,7 +231,8 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
         case (QueuedMatch(uuid, a, b, qT, rT), logger: MessageBus) =>
           val matchUuid = uuid getOrElse java.util.UUID.fromString("00000000-0000-0000-0000-000000000000")
           val c = context.actorOf(Props(new ZMQPelitaController(matchUuid,
-                                                                controller, subscriber, logger)))
+                                                                controller, subscriber, logger)).withDispatcher("akka.actor.worker-pinned-dispatcher"),
+                                        name = "ZMQPelitaController-" + scala.util.Random.nextInt(10000).toString)
           try {
             val resultIO = TestRunner.withPreparedGame(Pairing(a, b)) { preparedGame =>
               val (team1, team2) = preparedGame.teams
@@ -229,7 +256,7 @@ class Worker(masterLocation: ActorPath)(val controller: String, val subscriber: 
             // ensure that we kill the controller again
             context.system.stop(c)
             // also, sleep for, say 10 seconds, to ensure the zmq socket is really closed
-            // Thread.sleep(10000)
+            Thread.sleep(2000)
           }
           WorkComplete("done")
         case msg =>

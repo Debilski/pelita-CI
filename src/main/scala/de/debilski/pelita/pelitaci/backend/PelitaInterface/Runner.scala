@@ -22,10 +22,14 @@ trait PelitaGame extends Game {
   }
   
   def run(team1: String, team2: String, controller: Option[String]=None, subscriber: Option[String]=None) = {
+    println(cmd(team1, team2, controller, subscriber))
+    println(path)
     scala.sys.process.Process(cmd(team1, team2, controller, subscriber), cwd=path)
   }
 
   def checkName(team: String) = {
+    println(exe :: team :: "--check-team" :: Nil)
+    println(path)
     scala.sys.process.Process(exe :: team :: "--check-team" :: Nil, cwd=path)
   }
 }

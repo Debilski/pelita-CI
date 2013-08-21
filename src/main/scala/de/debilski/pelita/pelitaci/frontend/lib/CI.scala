@@ -1,6 +1,7 @@
 package de.debilski.pelita.pelitaci.frontend
 package lib
 
+import de.debilski.pelita.pelitaci.DefaultSettings
 import scala.concurrent.ExecutionContext.Implicits.global
 import net.liftweb.http.CometActor
 import de.debilski.pelita.pelitaci.backend._
@@ -10,7 +11,6 @@ import de.debilski.pelita.pelitaci.backend.PelitaInterface.{PelitaTeamMinimal, P
 import de.debilski.pelita.pelitaci.Ranking
 import de.debilski.pelita.pelitaci.backend.database.Match
 import PelitaInterface.PelitaMatchMinimal
-import scala.Some
 import de.debilski.pelita.pelitaci.backend.QueuedMatch
 import de.debilski.pelita.pelitaci.backend.SubscribeGlobal
 import de.debilski.pelita.pelitaci.backend.utils.workbalancer.InfoMessages.{QueueSizeChanged, NumWorkersChanged}
@@ -137,8 +137,8 @@ object CI {
   val autoScheduler = actorSystem.actorOf(akka.actor.Props[AutoScheduler], name = "autoScheduler")
 
 
-  def basePort = 51100
-  def numWorkers = 2
+  def basePort = DefaultSettings.initialZmqPort // 51100
+  def numWorkers = DefaultSettings.numWorkers // 2
 
   val workerFactory = new DefaultWorkerFactory(actorSystem, controller.path.child("gamebalancer"))
   val workers = (0 until numWorkers).map { i ⇒

@@ -1,5 +1,8 @@
 /project/target/
 /project/project/target
 /target/
+/vendor/
 *.h2.db
 *.db.lock.db
+.sass-cache
+.idea_modules
