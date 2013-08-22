@@ -145,10 +145,10 @@ object CI {
     workerFactory.worker(s"tcp://127.0.0.1:${basePort + 2 * i}", s"tcp://127.0.0.1:${basePort + 2 * i + 1}")
   }
 
-  val numWorkersAgent = akka.agent.Agent(0)(actorSystem)
-  val queueSizeAgent = akka.agent.Agent(0)(actorSystem)
+  val numWorkersAgent = akka.agent.Agent(0)
+  val queueSizeAgent = akka.agent.Agent(0)
 
-  val statisticsAgent = akka.agent.Agent((_statisticTotal, _statisticComplete))(actorSystem)
+  val statisticsAgent = akka.agent.Agent((_statisticTotal, _statisticComplete))
 
   val db = de.debilski.pelita.pelitaci.backend.database.DBController.createActor(actorSystem)("jdbc:h2:pelita.db")
   db.createDB()

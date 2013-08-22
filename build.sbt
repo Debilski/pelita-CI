@@ -2,14 +2,14 @@ organization := "de.debilski.pelita"
 
 name := "Pelita CI"
 
-version := "0.1-SNAPSHOT"
+version := "0.2-SNAPSHOT"
 
 scalaVersion := "2.10.1"
 
 seq(com.github.siasia.WebPlugin.webSettings :_*)
 
 libraryDependencies ++= {
-  val liftVersion = "2.5-RC2"
+  val liftVersion = "2.5"
   Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile",
     "org.eclipse.jetty" % "jetty-webapp" % "8.1.9.v20130131" % "container,test",
@@ -20,7 +20,7 @@ libraryDependencies ++= {
 resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
 
 libraryDependencies ++= {
-  val scalazVersion = "7.0.0-M9"
+  val scalazVersion = "7.0.3"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-effect" % scalazVersion
@@ -28,7 +28,7 @@ libraryDependencies ++= {
 }
 
 libraryDependencies ++= {
-  val akkaVersion = "2.1.2"
+  val akkaVersion = "2.2.0"
   Seq(
   	"com.typesafe.akka" %% "akka-actor" % akkaVersion,
   	"com.typesafe.akka" %% "akka-agent" % akkaVersion,

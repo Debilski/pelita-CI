@@ -79,11 +79,11 @@ class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberI
   def exit() = {}
 
   def extractMaze(data: JObject): Option[PelitaMaze] = {
-    val width = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "width"
-    val height = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "height"
-    val maze = data \ "universe" \ "__value__" \ "maze" \ "__value__" \ "data"
+    val width = data \ "universe" \ "__value__" \ "maze" \ "width"
+    val height = data \ "universe" \ "__value__" \ "maze" \ "height"
+    val maze = data \ "universe" \ "__value__" \ "maze" \ "data"
     val JArray(bots) = data \ "universe" \ "__value__" \ "bots"
-    val bot_positions = JArray(bots.map(_ \ "__value__" \ "current_pos"))
+    val bot_positions = JArray(bots.map(_ \ "current_pos"))
 
     (width, height, maze, bot_positions) match {
       case (w: JInt, h: JInt, m: JArray, b: JArray) => Some(PelitaMaze(width=w, height=h, walls=m, bot_positions = b))
@@ -94,10 +94,10 @@ class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberI
   def extractMinimal(data: JObject): Option[PelitaMatchMinimal] = {
     val JArray(teams) = data \ "universe" \ "__value__" \ "teams"
     val names = for {
-      JString(name) <- teams.map(_ \ "__value__" \ "name")
+      JString(name) <- teams.map(_ \ "name")
     } yield name
     val score = for {
-      JInt(score) <- teams.map(_ \ "__value__" \ "score")
+      JInt(score) <- teams.map(_ \ "score")
     } yield score.toInt
 
     val theTeams = names zip score map {
@@ -140,7 +140,7 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   import akka.zeromq._
   private[this] def ship(msg: String) = {
     println(s"shipping $msg")
-    ctrlSocket ! ZMQMessage(akka.util.ByteString(msg).toArray)
+    ctrlSocket ! ZMQMessage(akka.util.ByteString(msg))
   }
   private[this] def shipAction(action: String) = ship(s"""{"__action__": "$action"}""")
   
@@ -197,7 +197,7 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
 
     def receive: Receive = {
       case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ subscriptionReceiver.receive(akka.util.ByteString(m.frames(0).payload.toArray).utf8String.toString)
+      case m: ZMQMessage ⇒ subscriptionReceiver.receive(m.frame(0).utf8String.toString)
       case _             ⇒ //...
     }
   }))
