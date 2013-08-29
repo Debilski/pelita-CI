@@ -197,7 +197,7 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
 
     def receive: Receive = {
       case c@Connecting  ⇒ Logging(context.system, this).info(c.toString)
-      case m: ZMQMessage ⇒ subscriptionReceiver.receive(m.frame(0).utf8String.toString)
+      case m: ZMQMessage ⇒ subscriptionReceiver.receive(m.frames(0).utf8String.toString)
       case _             ⇒ //...
     }
   }))

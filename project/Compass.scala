@@ -1,6 +1,6 @@
 import sbt._
 import Keys._
-import sbt.Process._
+import sbt.Process
 
 object Compass extends Plugin {
   override lazy val settings = Seq(commands += compassCompile)
@@ -8,7 +8,7 @@ object Compass extends Plugin {
   lazy val compassCompile =
     Command.command("compass-compile") { (state: State) =>
       val cmd = "bundle" :: "exec" :: "compass" :: "compile" :: Nil
-      cmd.!!
+      Process(cmd).!!
       state
     }
 
