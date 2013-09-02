@@ -18,7 +18,7 @@ trait Ranking { self =>
 
   def normalise(scores: Map[Team, Score]) = {
     val sum = scores.map(_._2).sum
-    val num = scores.length
+    val num = scores.size
     val mean = sum/num
     scores.mapValues(sc => sc * 1000.0 / mean)
   }
