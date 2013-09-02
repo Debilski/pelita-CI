@@ -85,7 +85,7 @@ object CI {
 
   private var _ranking = new Ranking {
     type Team = Int
-    val teamScores = Map[Team, Score]() withDefaultValue 800.0
+    val teamScores = Map[Team, Score]() withDefaultValue 1000.0
   }
 
   case class WDL(wins: Int, draws: Int, losses: Int)
