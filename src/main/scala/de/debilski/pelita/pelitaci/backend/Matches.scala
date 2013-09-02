@@ -39,10 +39,10 @@ trait Ranking { self =>
     val winnerScore = winningScore(winner, loser)
     val loserScore = losingScore(loser, winner)
 
-    val teamScores = self.teamScores.updated(winner, winnerScore max 0).updated(loser, loserScore max 0)
+    val scores = self.teamScores.updated(winner, winnerScore max 0).updated(loser, loserScore max 0)
     new Ranking {
       type Team = self.Team
-      val teamScores = normalise(teamScores)
+      val teamScores = normalise(scores)
     }
   }
 
@@ -50,10 +50,10 @@ trait Ranking { self =>
     val newScore1 = drawScore(team1, team2)
     val newScore2 = drawScore(team2, team1)
 
-    val teamScores = self.teamScores.updated(team1, newScore1 max 0).updated(team2, newScore2 max 0)
+    val scores = self.teamScores.updated(team1, newScore1 max 0).updated(team2, newScore2 max 0)
     new Ranking {
       type Team = self.Team
-      val teamScores = normalise(teamScores)
+      val teamScores = normalise(scores)
     }
   }
 }
