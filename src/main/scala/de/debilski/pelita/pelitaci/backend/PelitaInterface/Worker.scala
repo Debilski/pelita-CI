@@ -8,6 +8,8 @@ import akka.event.Logging
 import java.util.UUID
 import net.liftweb.json._
 
+import org.zeromq.ZMQ
+
 trait SimpleControllerInterface {
   def set_initial()
   def play()
@@ -136,11 +138,10 @@ class SimpleSubscriber(uuid: UUID, logger: MessageBus) extends SimpleSubscriberI
   }
 }
 
-class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleControllerInterface {
-  import akka.zeromq._
+class SimpleController(ctrlSocket: ZMQ.Socket) extends SimpleControllerInterface {
   private[this] def ship(msg: String) = {
     println(s"shipping $msg")
-    ctrlSocket ! ZMQMessage(akka.util.ByteString(msg))
+    ctrlSocket.send(msg)
   }
   private[this] def shipAction(action: String) = ship(s"""{"__action__": "$action"}""")
   
@@ -152,10 +153,27 @@ class SimpleController(ctrlSocket: akka.actor.ActorRef) extends SimpleController
   def exit() = shipAction("exit")
 }
 
-class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
-  import akka.zeromq._
+class ZMQSubscriber(val url: String) extends Actor with ActorLogging {
+  private[this] var _zmqContext: ZMQ.Context
+  private[this] var _zmqSocket: ZMQ.Socket
 
-  val zmqContext = Context()
+  override def preStart(): Unit = {
+    _zmqContext = ZMQ.context(1)
+    _zmqSocket = _zmqContext.socket(ZMQ.SUB)
+    _zmqSocket.connect(url)
+  }
+  override def postStop(): Unit = {
+    _zmqSocket.close()
+    _zmqContext.term()
+  }
+
+  def receive = {
+  }
+}
+
+
+class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber: String, val logger: MessageBus) extends Actor with ActorLogging {
+  val zmqContext = ZMQ.context(1)
 
   // Ported from akka-testkit
   import scala.concurrent.duration._
@@ -189,7 +207,8 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
     System.gc()
   }
 
-  private[this] val ctrlSocket = ZeroMQExtension(context.system).newSocket(SocketType.Dealer, zmqContext, Connect(controller), Linger(0))
+  private[this] val ctrlSocket = zmqContext.socket(ZMQ.DEALER)
+  ctrlSocket.connect(controller) // ZeroMQExtension(context.system).newSocket(SocketType.Dealer, zmqContext, Connect(controller), Linger(0))
   val controllerSender = new SimpleController(ctrlSocket)
 
   val subListener = context.actorOf(Props(new Actor {
@@ -201,7 +220,8 @@ class ZMQPelitaController(val uuid: UUID, val controller: String, val subscriber
       case _             ⇒ //...
     }
   }))
-  private[this] val subSocket = ZeroMQExtension(context.system).newSocket(SocketType.Sub, zmqContext, Listener(subListener), Connect(subscriber), SubscribeAll, Linger(0))
+  private[this] val subSocket = zmqContext.socket(ZMQ.SUB)
+  subSocket.connect(subscriber) // ZeroMQExtension(context.system).newSocket(SocketType.Sub, zmqContext, Listener(subListener), Connect(subscriber), SubscribeAll, Linger(0))
   
   def receive = {
     case "set_initial" => { controllerSender.set_initial }

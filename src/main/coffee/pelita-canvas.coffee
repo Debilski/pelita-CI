@@ -35,7 +35,7 @@ this.Maze = class Maze
     @ctx.fillRect(0, 0, @width * @scale, @height * @scale)
 
     @ctx.strokeStyle = '#fa00ff'
-    @ctx.lineWidth = 5;
+    @ctx.lineWidth = 5
     @ctx.lineCap = 'round'
 
     @ctx.fillStyle = "#44BBDD" # "rgba(0, 0, 255, .5)"

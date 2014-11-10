@@ -40,8 +40,8 @@ object Rest extends RestHelper {
         val team = de.debilski.pelita.pelitaci.backend.Team(url, factory, None)
 
         val res = runner.checkTeamName(team).unsafePerformIO() match {
-          case Some(teamName) => Future successful teamName
-          case None => Future failed (new Throwable)
+          case (lines, Some(teamName)) => Future successful teamName
+          case (lines, None) => Future failed (new Throwable)
         }
         res map (teamName => (url, factory, teamName))
       }
@@ -90,10 +90,11 @@ object Rest extends RestHelper {
     }
 
     import akka.util.Timeout
+    import java.util.concurrent.TimeUnit
     import scala.concurrent.duration.Duration
     import net.liftweb.json.JsonDSL._
 
-    implicit val timeout = Timeout(5000L)
+    implicit val timeout = Timeout(5000L, TimeUnit.MILLISECONDS)
 
     for {
       Some((id1, id2)) <- teamIds

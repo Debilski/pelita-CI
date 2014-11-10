@@ -1,37 +1,38 @@
 package de.debilski.pelita.pelitaci.backend.database
 
 import scala.slick.driver.H2Driver.simple._
-import Database.threadLocalSession
+import Database.dynamicSession
 import java.util.UUID
 
 case class Team(id: Option[Int], url: String, factory: String, name: Option[String])
 case class Match(uuid: Option[UUID], teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp])
 
 class Tables { 
-  object Teams extends Table[Team]("TEAMS") {
+  class Teams(tag: Tag) extends Table[Team](tag, "TEAMS") {
     def id = column[Int]("TEAM_ID", O.PrimaryKey, O.AutoInc)
     def url = column[String]("TEAM_URL")
     def factory = column[String]("TEAM_FACTORY")
     def name = column[String]("TEAM_NAME", O.Nullable)
-    def * = id.? ~ url ~ factory ~ name.? <> (Team, Team.unapply _)
+    def * = (id.?, url, factory, name.?) <> (Team.tupled, Team.unapply)
   
-    def forInsert = url ~ factory ~ name.?
     def idx = index("idx_a", (url, factory), unique = true)
   }
+  val teams = TableQuery[Teams]
   
-  object Matches extends Table[Match]("MATCHES") {
+  class Matches(tag: Tag) extends Table[Match](tag, "MATCHES") {
     def uuid = column[UUID]("MATCH_ID", O.PrimaryKey)
     def teamA_id = column[Int]("TEAMA_ID")
     def teamB_id = column[Int]("TEAMB_ID")
     def result = column[Int]("RESULT")
     def timestamp = column[java.sql.Timestamp]("TIMESTAMP")
-    def * = uuid.? ~ teamA_id ~ teamB_id ~ result ~ timestamp.? <> (Match, Match.unapply _)
+    def * = (uuid.?, teamA_id, teamB_id, result, timestamp.?) <> (Match.tupled, Match.unapply)
     
-    def teamA = foreignKey("TEAMA_ID_FK", teamA_id, Teams)(_.id)
-    def teamB = foreignKey("TEAMB_ID_FK", teamB_id, Teams)(_.id)
+    def teamA = foreignKey("TEAMA_ID_FK", teamA_id, teams)(_.id)
+    def teamB = foreignKey("TEAMB_ID_FK", teamB_id, teams)(_.id)
   
-    def forInsert = teamA_id ~ teamB_id ~ result
+    def forInsert = matches.map(m => (m.teamA_id, m.teamB_id, m.result))
   }
+  val matches = TableQuery[Matches]
 }
 
 import scala.concurrent.{ Promise, Future, Await }
@@ -60,42 +61,42 @@ class DBControllerImpl(dbURL: String) extends DBController with TypedActor.PreRe
   import TypedActor.dispatcher
   
   def createDB(): Unit = {
-    db withSession {
+    db withDynSession {
       log.info("Creating database")
       try {
-        (tables.Teams.ddl ++ tables.Matches.ddl).create
+        (tables.teams.ddl ++ tables.matches.ddl).create
       } catch {
         case e: org.h2.jdbc.JdbcSQLException => log.info(s"Could not create database for URL $dbURL. ($e)")
       }
     }
   }
   
-  def addTeam(url: String, factory: String, name: Option[String]): Future[Int] =  db withSession {
+  def addTeam(url: String, factory: String, name: Option[String]): Future[Int] =  db withDynSession {
     val id: Int = try {
-        tables.Teams.forInsert returning tables.Teams.id insert (url, factory, name)
+        tables.teams.map(t => (t.url, t.factory, t.name.?)).returning(tables.teams.map(_.id)) += (url, factory, name)
       } catch {
         case e: org.h2.jdbc.JdbcSQLException =>
-          name.foreach(newName => (for { team <- tables.Teams if team.url === url && team.factory === factory} yield team.name).update(newName))
-          (for { team <- tables.Teams if team.url === url && team.factory === factory} yield team.id).first
+          name.foreach(newName => (for { team <- tables.teams if team.url === url && team.factory === factory} yield team.name).update(newName))
+          (for { team <- tables.teams if team.url === url && team.factory === factory} yield team.id).first
       }
     (Promise successful id).future
   }
 
-  def getTeam(id: Int): Future[Team] = db withSession {
-    (Promise() complete scala.util.Try(tables.Teams.filter(_.id === id).map(_.*).first)).future
+  def getTeam(id: Int): Future[Team] = db withDynSession {
+    (Promise() complete scala.util.Try(tables.teams.filter(_.id === id).first)).future
   }
   
-  def getTeams(): Future[Seq[Team]] = db withSession {
-    (Promise() complete scala.util.Try((for (t <- tables.Teams) yield t).list.toSeq)).future
+  def getTeams(): Future[Seq[Team]] = db withDynSession {
+    (Promise() complete scala.util.Try((for (t <- tables.teams) yield t).list.toSeq)).future
   }
 
-  def storeMatch(uuid: UUID, teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp]): Unit = db withSession {
+  def storeMatch(uuid: UUID, teamA: Int, teamB: Int, result: Int, timestamp: Option[java.sql.Timestamp]): Unit = db withDynSession {
     val tstamp = timestamp orElse Option(new java.sql.Timestamp(java.util.Calendar.getInstance.getTime.getTime))
-    tables.Matches insert Match(Some(uuid), teamA, teamB, result, tstamp)
+    tables.matches += Match(Some(uuid), teamA, teamB, result, tstamp)
   }
 
-  def getMatches(): Future[Seq[Match]] = db withSession {
-    (Promise() complete scala.util.Try((for (m <- tables.Matches.sortBy(_.timestamp)) yield m).list.toSeq)).future
+  def getMatches(): Future[Seq[Match]] = db withDynSession {
+    (Promise() complete scala.util.Try((for (m <- tables.matches.sortBy(_.timestamp)) yield m).list.toSeq)).future
   }
 }
 

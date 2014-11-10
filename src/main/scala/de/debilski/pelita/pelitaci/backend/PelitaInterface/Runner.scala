@@ -102,7 +102,7 @@ abstract class Runner {
     def teams = (PreparedTeam(pairing.team1, teamSpecs._1), PreparedTeam(pairing.team2, teamSpecs._2))
   }
 
-  def withPreparedTeam[T](team: Team)(f: PreparedTeam => IO[Option[T]]): IO[Option[T]] = {
+  def withPreparedTeam[T](team: Team)(f: PreparedTeam => IO[(Stream[String], Option[T])]): IO[(Stream[String], Option[T])] = {
     withTemporaryDirectory("pelita-CI-") { tempDir => IO {
 
       import java.nio.file.Files
@@ -125,7 +125,7 @@ abstract class Runner {
     } flatMap (teamSpec => f(PreparedTeam(team, teamSpec)))
     }}
 
-  def withPreparedGame[T](pairing: Pairing)(f: PreparedGame => IO[Option[T]]): IO[Option[T]] = {
+  def withPreparedGame[T](pairing: Pairing)(f: PreparedGame => IO[(Stream[String], Option[T])]): IO[(Stream[String], Option[T])] = {
     val Pairing(team1: Team, team2: Team) = pairing
 
     withPreparedTeam(team1) { preparedTeam1 =>
@@ -136,31 +136,33 @@ abstract class Runner {
     }
   }
 
-  def playPreparedGame(controller: Option[String]=None, subscriber: Option[String]=None): PreparedGame => IO[Option[MatchResult]] = preparedGame => IO {
+  def playPreparedGame(controller: Option[String]=None, subscriber: Option[String]=None): PreparedGame => IO[(Stream[String], Option[MatchResult])] = preparedGame => IO {
     val lines = game.run(preparedGame.teamSpecs._1, preparedGame.teamSpecs._2, controller, subscriber).lines
 
     lines foreach println
     val pelitaOutput = lines.lastOption
 
-    pelitaOutput flatMap {
+    val res = pelitaOutput flatMap {
       case "-" => Some(MatchDraw)
       case "0" => Some(MatchWinnerLeft)
       case "1" => Some(MatchWinnerRight)
       case _ => None
     } map (res => MatchResult(preparedGame.pairing, res))
+
+    (lines, res)
   }
 
-  def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[Option[MatchResult]] =
+  def playGame(pairing: Pairing, controller: Option[String]=None, subscriber: Option[String]=None): IO[(Stream[String], Option[MatchResult])] =
     withPreparedGame(pairing)(playPreparedGame(controller, subscriber))
 
-  def checkPreparedTeamName(): PreparedTeam => IO[Option[String]] = preparedTeam => IO {
+  def checkPreparedTeamName(): PreparedTeam => IO[(Stream[String], Option[String])] = preparedTeam => IO {
     val lines = game.checkName(preparedTeam.teamSpec).lines
 
     lines foreach println
 
-    lines.lastOption
+    (lines, lines.lastOption)
   }
 
-  def checkTeamName(team: Team): IO[Option[String]] =
+  def checkTeamName(team: Team): IO[(Stream[String], Option[String])] =
     withPreparedTeam(team)(checkPreparedTeamName())
 }
